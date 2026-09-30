@@ -484,8 +484,8 @@ export default function BiographyPage() {
                               })}
                             </span>
                           </div>
-                          <p className="text-sm text-ink/80 font-serif italic line-clamp-2">
-                            &ldquo;{story.transcript}&rdquo;
+                          <p className="text-sm text-ink/80 font-serif leading-relaxed">
+                            {story.summary || (story.transcript.length > 180 ? story.transcript.slice(0, 180) + "…" : story.transcript)}
                           </p>
                         </div>
                       ))}
@@ -548,7 +548,7 @@ export default function BiographyPage() {
                           <div key={s.id} className="text-xs text-ink/80 flex items-start gap-1.5">
                             <Quote className="w-3 h-3 text-warm-brown/60 shrink-0 mt-0.5" />
                             <span className="font-serif italic line-clamp-1">{s.title || "Oral Turn"}:</span>
-                            <span className="line-clamp-1 text-ink/65">&ldquo;{s.transcript}&rdquo;</span>
+                            <span className="line-clamp-1 text-ink/65">{s.summary || s.transcript}</span>
                           </div>
                         ))}
                       </div>
@@ -629,7 +629,7 @@ export default function BiographyPage() {
                           <div key={s.id} className="text-xs text-ink/80 flex items-start gap-1.5">
                             <Quote className="w-3 h-3 text-warm-brown/60 shrink-0 mt-0.5" />
                             <span className="font-serif italic line-clamp-1">{s.title || "Oral Turn"}:</span>
-                            <span className="line-clamp-1 text-ink/65">&ldquo;{s.transcript}&rdquo;</span>
+                            <span className="line-clamp-1 text-ink/65">{s.summary || s.transcript}</span>
                           </div>
                         ))}
                       </div>
@@ -695,7 +695,7 @@ export default function BiographyPage() {
                         <div className="text-xs text-ink/80 flex items-start gap-1.5">
                           <Quote className="w-3 h-3 text-warm-brown/60 shrink-0 mt-0.5" />
                           <span className="font-serif italic">{event.story.title}:</span>
-                          <span className="line-clamp-2 text-ink/65">&ldquo;{event.story.transcript}&rdquo;</span>
+                          <span className="line-clamp-2 text-ink/65">{event.story.summary || event.story.transcript}</span>
                         </div>
                       </div>
                     )}
