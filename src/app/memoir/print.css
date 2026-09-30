@@ -1,0 +1,27 @@
+@media print {
+  @page {
+    margin: 2cm;
+  }
+  
+  body {
+    background-color: white !important;
+    color: black !important;
+  }
+
+  /* Tailwind print utilities are handled by 'print:' classes, but we can add specific ones here if needed */
+  
+  .print-chapter-break {
+    page-break-before: always;
+  }
+
+  .print-story-break {
+    page-break-inside: avoid;
+    margin-bottom: 3rem;
+  }
+
+  /* Make sure everything expands */
+  html, body, main {
+    height: auto !important;
+    overflow: visible !important;
+  }
+}

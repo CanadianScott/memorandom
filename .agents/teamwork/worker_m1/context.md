@@ -1,0 +1,12 @@
+# Worker M1 Context: Data Layer & Sortable Story Catalog (R1)
+- Mission: Implement Milestone 1 per PROJECT.md and Explorer 1 Survey Report.
+- Read ORIGINAL_REQUEST.md: c:\Users\goate\Coding Projects\memorandom\.agents\teamwork\ORIGINAL_REQUEST.md
+- Read PROJECT.md: c:\Users\goate\Coding Projects\memorandom\PROJECT.md
+- Read Explorer 1 Survey: c:\Users\goate\Coding Projects\memorandom\.agents\teamwork\explorer_survey_catalog_bio\handoff.md
+- Working Directory: c:\Users\goate\Coding Projects\memorandom\.agents\teamwork\worker_m1
+- Exclusively owned files:
+  - src/lib/supabase/local-store.ts
+  - src/lib/supabase/client.ts
+  - src/components/catalog/StoryCatalog.tsx
+  - src/components/catalog/StoryCard.tsx
+  - src/app/page.tsx

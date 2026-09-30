@@ -1,0 +1,12 @@
+# Worker M2 Context: Persistent Biographical Sketch (R2)
+- Mission: Implement Milestone 2 per PROJECT.md and Explorer 1 Survey Report.
+- Read ORIGINAL_REQUEST.md: c:\Users\goate\Coding Projects\memorandom\.agents\teamwork\ORIGINAL_REQUEST.md
+- Read PROJECT.md: c:\Users\goate\Coding Projects\memorandom\PROJECT.md
+- Read Explorer 1 Survey: c:\Users\goate\Coding Projects\memorandom\.agents\teamwork\explorer_survey_catalog_bio\handoff.md
+- Read TEST_INFRA.md: c:\Users\goate\Coding Projects\memorandom\TEST_INFRA.md
+- Working Directory: c:\Users\goate\Coding Projects\memorandom\.agents\teamwork\worker_m2
+- Exclusively owned files:
+  - src/app/biography/page.tsx
+  - src/app/biography/print.css
+  - src/app/page.tsx (to add Biography link in navigation bar)
+  - public/sw.js (to append /biography to STATIC_ASSETS)

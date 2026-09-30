@@ -1,0 +1,12 @@
+# Worker M3 Context: Historically-Grounded Interview Prompts (R3)
+- Mission: Implement Milestone 3 per PROJECT.md and Explorer 2 Survey Report.
+- Read ORIGINAL_REQUEST.md: c:\Users\goate\Coding Projects\memorandom\.agents\teamwork\ORIGINAL_REQUEST.md
+- Read PROJECT.md: c:\Users\goate\Coding Projects\memorandom\PROJECT.md
+- Read Explorer 2 Survey: c:\Users\goate\Coding Projects\memorandom\.agents\teamwork\explorer_survey_historical_prompts\handoff.md
+- Working Directory: c:\Users\goate\Coding Projects\memorandom\.agents\teamwork\worker_m3
+- Exclusively owned files:
+  - src/types/historical-context.ts
+  - src/lib/gemini/historical-context.ts
+  - src/app/api/gemini/historical-context/route.ts
+  - src/lib/interview/knowledge-graph.ts
+  - src/app/interview/page.tsx

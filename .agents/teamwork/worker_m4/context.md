@@ -1,0 +1,13 @@
+# Worker M4 Context: Visual Stage Pipeline Fixes & Deployment Docs (R4, R5)
+- Mission: Implement Milestone 4 per PROJECT.md and Explorer 3 Survey Report.
+- Read ORIGINAL_REQUEST.md: c:\Users\goate\Coding Projects\memorandom\.agents\teamwork\ORIGINAL_REQUEST.md
+- Read PROJECT.md: c:\Users\goate\Coding Projects\memorandom\PROJECT.md
+- Read Explorer 3 Survey: c:\Users\goate\Coding Projects\memorandom\.agents\teamwork\explorer_survey_deployment_visual\handoff.md
+- Read TEST_INFRA.md: c:\Users\goate\Coding Projects\memorandom\TEST_INFRA.md
+- Working Directory: c:\Users\goate\Coding Projects\memorandom\.agents\teamwork\worker_m4
+- Exclusively owned files:
+  - src/lib/gemini/interview.ts
+  - src/lib/gemini/visual-context.ts
+  - src/components/visual-stage/VisualStage.tsx
+  - src/app/interview/page.tsx
+  - README.md
