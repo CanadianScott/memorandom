@@ -33,7 +33,7 @@ export default async function HomePage() {
         {/* Header */}
         <header className="text-center mb-16">
           <h1 className="text-5xl md:text-7xl font-serif font-bold text-warm-brown mb-4 tracking-tight">
-            Memorandom
+            memo<em>random</em>
           </h1>
           <p className="text-xl md:text-2xl text-ink/80 font-serif italic">
             Your Life Story, Beautifully Told

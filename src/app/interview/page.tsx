@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { VisualStage } from "@/components/visual-stage/VisualStage";
 import { LiveTranscript } from "@/components/interview/LiveTranscript";
@@ -16,7 +17,7 @@ import { HistoricalContextResponse, HistoricalPromptItem } from "@/types/histori
 import { SessionMode } from "@/types/database";
 import { ExtractedEntity } from "@/types/entities";
 import { CarouselItem } from "@/components/visual-stage/ImageCarousel";
-import { Sparkles, Radio, Keyboard, Send, RefreshCw, Image as ImageIcon, MapPin } from "lucide-react";
+import { Sparkles, Radio, Keyboard, Send, RefreshCw, Image as ImageIcon, MapPin, Home } from "lucide-react";
 
 function InterviewContent() {
   const searchParams = useSearchParams();
@@ -436,6 +437,9 @@ function InterviewContent() {
         {/* Top Bar */}
         <div className="flex flex-wrap justify-between items-center gap-3 mb-8">
           <div className="flex items-center gap-3">
+            <Link href="/" className="text-warm-brown/70 hover:text-warm-brown transition" aria-label="Home">
+              <Home className="w-5 h-5" />
+            </Link>
             <span className="text-sm font-semibold uppercase tracking-widest text-warm-brown/80 font-sans">
               {mode.replace("_", " ")}
             </span>
