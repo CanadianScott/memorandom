@@ -22,132 +22,21 @@ const STORAGE_KEYS = {
   CHAPTER_STORIES: "memorandom_chapter_stories",
 };
 
-const now = new Date().toISOString();
-
-// Seed data to make the app immediately testable out of the box
-const SEED_ENTITIES: Entity[] = [
-  {
-    id: "entity-seed-1",
-    name: "Billy Miller",
-    type: "person",
-    metadata: { relationship: "Childhood best friend" },
-    mention_count: 3,
-    first_mentioned_at: now,
-    created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
-    updated_at: now,
-  },
-  {
-    id: "entity-seed-2",
-    name: "Yellowstone National Park",
-    type: "place",
-    metadata: { location: "Wyoming", context: "1965 family road trip" },
-    mention_count: 2,
-    first_mentioned_at: now,
-    created_at: new Date(Date.now() - 86400000 * 4).toISOString(),
-    updated_at: now,
-  },
-  {
-    id: "entity-seed-3",
-    name: "Grandma Rose",
-    type: "person",
-    metadata: { relationship: "Maternal grandmother" },
-    mention_count: 4,
-    first_mentioned_at: now,
-    created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
-    updated_at: now,
-  },
-  {
-    id: "entity-seed-4",
-    name: "Chicago, Illinois",
-    type: "place",
-    metadata: { context: "Hometown neighborhood" },
-    mention_count: 5,
-    first_mentioned_at: now,
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-    updated_at: now,
-  },
-  {
-    id: "entity-seed-5",
-    name: "1950s Childhood",
-    type: "era",
-    metadata: { years: "1950-1960" },
-    mention_count: 4,
-    first_mentioned_at: now,
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-    updated_at: now,
-  },
-];
-
-const SEED_STORIES: Story[] = [
-  {
-    id: "story-seed-1",
-    session_id: "session-seed-1",
-    title: "Sandlot Baseball on Miller's Field",
-    transcript:
-      "Every Saturday morning in the mid-fifties, Billy Miller and I would grab our gloves and head to the empty lot behind the grocery store. We didn't have real bases—just flat rocks and an old rubber tire for home plate. Those summer afternoons seemed to last forever.",
-    summary: "Childhood baseball games at the sandlot with best friend Billy Miller in Chicago.",
-    gemini_interaction_id: null,
-    era_tags: ["1950s Childhood"],
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-    updated_at: now,
-  },
-  {
-    id: "story-seed-2",
-    session_id: "session-seed-2",
-    title: "The Great Yellowstone Road Trip of '65",
-    transcript:
-      "Dad bought a pre-owned wood-paneled station wagon and announced we were heading west. Five of us packed into that car without air conditioning, singing along to the radio. Seeing Old Faithful erupt for the first time took our breath away.",
-    summary: "Memorable cross-country family road trip to Yellowstone National Park in the station wagon.",
-    gemini_interaction_id: null,
-    era_tags: ["1960s Travels"],
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-    updated_at: now,
-  },
-];
-
-const SEED_CHAPTERS: Chapter[] = [
-  {
-    id: "chapter-seed-1",
-    title: "Childhood in Chicago",
-    summary: "Memories of growing up, games on the neighborhood sandlots, and life in the 1950s.",
-    cover_media_id: null,
-    display_order: 1,
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-    updated_at: now,
-  },
-  {
-    id: "chapter-seed-2",
-    title: "Adventures on the Open Road",
-    summary: "Family travels, national park expeditions, and memories from the 1960s.",
-    cover_media_id: null,
-    display_order: 2,
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-    updated_at: now,
-  },
-];
-
-const SEED_CHAPTER_STORIES = [
-  { chapter_id: "chapter-seed-1", story_id: "story-seed-1", display_order: 1 },
-  { chapter_id: "chapter-seed-2", story_id: "story-seed-2", display_order: 1 },
-];
-
-const SEED_STORY_ENTITIES: StoryEntity[] = [
-  { story_id: "story-seed-1", entity_id: "entity-seed-1", confidence: 1.0 },
-  { story_id: "story-seed-1", entity_id: "entity-seed-4", confidence: 1.0 },
-  { story_id: "story-seed-1", entity_id: "entity-seed-5", confidence: 1.0 },
-  { story_id: "story-seed-2", entity_id: "entity-seed-2", confidence: 1.0 },
-  { story_id: "story-seed-2", entity_id: "entity-seed-3", confidence: 1.0 },
-];
+const SEED_ENTITIES: Entity[] = [];
+const SEED_STORIES: Story[] = [];
+const SEED_CHAPTERS: Chapter[] = [];
+const SEED_CHAPTER_STORIES: { chapter_id: string; story_id: string; display_order: number }[] = [];
+const SEED_STORY_ENTITIES: StoryEntity[] = [];
 
 // In-memory cache for server-side or environments without localStorage
 const memoryStore: Record<string, unknown[]> = {
   [STORAGE_KEYS.SESSIONS]: [],
-  [STORAGE_KEYS.ENTITIES]: [...SEED_ENTITIES],
-  [STORAGE_KEYS.STORIES]: [...SEED_STORIES],
-  [STORAGE_KEYS.STORY_ENTITIES]: [...SEED_STORY_ENTITIES],
+  [STORAGE_KEYS.ENTITIES]: [],
+  [STORAGE_KEYS.STORIES]: [],
+  [STORAGE_KEYS.STORY_ENTITIES]: [],
   [STORAGE_KEYS.MEDIA]: [],
-  [STORAGE_KEYS.CHAPTERS]: [...SEED_CHAPTERS],
-  [STORAGE_KEYS.CHAPTER_STORIES]: [...SEED_CHAPTER_STORIES],
+  [STORAGE_KEYS.CHAPTERS]: [],
+  [STORAGE_KEYS.CHAPTER_STORIES]: [],
 };
 
 function isBrowser(): boolean {
