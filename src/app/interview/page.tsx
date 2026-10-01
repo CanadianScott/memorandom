@@ -23,6 +23,7 @@ function InterviewContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const mode = (searchParams.get("mode") as SessionMode) || "surprise_me";
+  const isSandbox = searchParams.get("sandbox") === "true";
 
   // Conversation Engine: "gemini_live" (real-time voice) or "classic" (turn-by-turn fallback)
   const [engineMode, setEngineMode] = useState<"gemini_live" | "classic">("gemini_live");
@@ -177,8 +178,8 @@ function InterviewContent() {
       if (userText) {
         await triggerVisualEnrichment(userText);
 
-        // Save story turn to Supabase
-        if (session) {
+        // Save story turn to Supabase (skip in sandbox mode)
+        if (session && !isSandbox) {
           try {
             await saveStoryFromTranscript(session, userText);
           } catch {
@@ -275,10 +276,12 @@ function InterviewContent() {
 
         await triggerVisualEnrichment(textToProcess);
 
-        // Save story
-        try {
-          await saveStoryFromTranscript(activeSession, textToProcess);
-        } catch {}
+        // Save story (skip in sandbox mode)
+        if (!isSandbox) {
+          try {
+            await saveStoryFromTranscript(activeSession, textToProcess);
+          } catch {}
+        }
 
         // Increment conversation turn count
         const nextTurn = turnCountRef.current + 1;
@@ -434,6 +437,12 @@ function InterviewContent() {
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-cream">
       <main className="w-full md:w-[60%] flex flex-col p-6 md:p-12 relative border-r border-warm-brown/20">
+        {/* Sandbox Banner */}
+        {isSandbox && (
+          <div className="mb-4 px-4 py-2 rounded-lg bg-amber-100 border border-amber-400 text-amber-800 text-sm font-medium text-center">
+            🧪 Sandbox Mode — this session will not be saved
+          </div>
+        )}
         {/* Top Bar */}
         <div className="flex flex-wrap justify-between items-center gap-3 mb-8">
           <div className="flex items-center gap-3">

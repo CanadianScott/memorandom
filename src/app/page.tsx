@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { MessageCircle, Clock, Sparkles, BookOpen, Upload, ScrollText } from "lucide-react";
-import { Card } from "@/components/ui/Card";
+import { BookOpen, Upload, ScrollText } from "lucide-react";
 import { getStories, getEntities } from "@/lib/supabase/client";
 import { StoryCatalog } from "@/components/catalog/StoryCatalog";
+import { SessionStarters } from "@/components/SessionStarters";
 
 export default async function HomePage() {
   const allStories = await getStories().catch(() => []);
@@ -56,38 +56,7 @@ export default async function HomePage() {
           </div>
         </div>
 
-        {/* Session Starters */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
-          <Link href="/interview?mode=continue_thread" className="block group">
-            <Card className="h-full bg-aged-paper/40 hover:bg-aged-paper border-warm-brown/20 transition-all duration-300 transform group-hover:-translate-y-1">
-              <div className="w-12 h-12 rounded-full bg-warm-brown/10 flex items-center justify-center mb-6">
-                <MessageCircle className="w-6 h-6 text-warm-brown" />
-              </div>
-              <h2 className="text-xl font-serif font-bold text-ink mb-2">Continue a Thread</h2>
-              <p className="text-ink/70">Pick up where you left off</p>
-            </Card>
-          </Link>
-
-          <Link href="/interview?mode=explore_era" className="block group">
-            <Card className="h-full bg-aged-paper/40 hover:bg-aged-paper border-warm-brown/20 transition-all duration-300 transform group-hover:-translate-y-1">
-              <div className="w-12 h-12 rounded-full bg-warm-brown/10 flex items-center justify-center mb-6">
-                <Clock className="w-6 h-6 text-warm-brown" />
-              </div>
-              <h2 className="text-xl font-serif font-bold text-ink mb-2">Explore a Life Era</h2>
-              <p className="text-ink/70">Walk through the decades</p>
-            </Card>
-          </Link>
-
-          <Link href="/interview?mode=surprise_me" className="block group">
-            <Card className="h-full bg-aged-paper/40 hover:bg-aged-paper border-warm-brown/20 transition-all duration-300 transform group-hover:-translate-y-1">
-              <div className="w-12 h-12 rounded-full bg-warm-brown/10 flex items-center justify-center mb-6">
-                <Sparkles className="w-6 h-6 text-warm-brown" />
-              </div>
-              <h2 className="text-xl font-serif font-bold text-ink mb-2">Surprise Me</h2>
-              <p className="text-ink/70">A random trip down memory lane</p>
-            </Card>
-          </Link>
-        </div>
+        <SessionStarters />
 
         {/* Story Catalog */}
         <StoryCatalog initialStories={allStories} initialEntities={entities} />
