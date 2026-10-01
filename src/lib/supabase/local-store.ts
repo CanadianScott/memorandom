@@ -156,17 +156,45 @@ const SEED_ENTITIES: Entity[] = [
     updated_at: now,
   },
 ];
-const SEED_STORIES: Story[] = [];
+const SEED_STORIES: Story[] = [
+  {
+    id: "story-bio-overview",
+    session_id: null,
+    title: "A Life Between Idaho and Alberta",
+    transcript:
+      "Blair Goates was born in the late 1950s in Blackfoot, Idaho, a small town where everyone knew everyone. Each summer, the family would make the drive north to Waterton, Alberta, where the Canadian Rockies met the prairies — a place that would shape his love of the outdoors for the rest of his life. In his early twenties, Blair married Robin Milne and the couple settled in Lethbridge, Alberta, where he built a career in accounting. But numbers were only part of who he was. Blair was a man drawn to the sky and the mountains — he earned his pilot's license and even owned his own plane for a time, loved nothing more than a long hike through the alpine or a day on the ski slopes. Together, Blair and Robin raised three children — Melissa, Scott, and Jessica — filling their Lethbridge home with the same spirit of adventure that had defined his own childhood summers in Waterton.",
+    summary:
+      "Blair Goates grew up in Blackfoot, Idaho during the late 1950s, spending his childhood summers in the shadow of the Canadian Rockies at Waterton, Alberta. After marrying Robin Milne in his early twenties, he settled in Lethbridge, Alberta, where he built a long career as an accountant while nurturing his passions for hiking, skiing, and flying — at one point owning his own aircraft. He and Robin raised three children, Melissa, Scott, and Jessica, in a household shaped by the same adventurous spirit that had defined his formative years.",
+    gemini_interaction_id: null,
+    era_tags: ["Childhood in Blackfoot", "Marriage & Early Career", "Career & Family Life in Lethbridge"],
+    created_at: now,
+    updated_at: now,
+  },
+];
 const SEED_CHAPTERS: Chapter[] = [];
 const SEED_CHAPTER_STORIES: { chapter_id: string; story_id: string; display_order: number }[] = [];
-const SEED_STORY_ENTITIES: StoryEntity[] = [];
+const SEED_STORY_ENTITIES: StoryEntity[] = [
+  { story_id: "story-bio-overview", entity_id: "entity-blair", confidence: 1.0 },
+  { story_id: "story-bio-overview", entity_id: "entity-robin", confidence: 1.0 },
+  { story_id: "story-bio-overview", entity_id: "entity-melissa", confidence: 1.0 },
+  { story_id: "story-bio-overview", entity_id: "entity-scott", confidence: 1.0 },
+  { story_id: "story-bio-overview", entity_id: "entity-jessica", confidence: 1.0 },
+  { story_id: "story-bio-overview", entity_id: "entity-blackfoot", confidence: 1.0 },
+  { story_id: "story-bio-overview", entity_id: "entity-waterton", confidence: 1.0 },
+  { story_id: "story-bio-overview", entity_id: "entity-lethbridge", confidence: 1.0 },
+  { story_id: "story-bio-overview", entity_id: "entity-era-childhood", confidence: 1.0 },
+  { story_id: "story-bio-overview", entity_id: "entity-era-young-adult", confidence: 1.0 },
+  { story_id: "story-bio-overview", entity_id: "entity-era-career", confidence: 1.0 },
+  { story_id: "story-bio-overview", entity_id: "entity-event-marriage", confidence: 1.0 },
+  { story_id: "story-bio-overview", entity_id: "entity-event-plane", confidence: 1.0 },
+];
 
 // In-memory cache for server-side or environments without localStorage
 const memoryStore: Record<string, unknown[]> = {
   [STORAGE_KEYS.SESSIONS]: [],
   [STORAGE_KEYS.ENTITIES]: [...SEED_ENTITIES],
-  [STORAGE_KEYS.STORIES]: [],
-  [STORAGE_KEYS.STORY_ENTITIES]: [],
+  [STORAGE_KEYS.STORIES]: [...SEED_STORIES],
+  [STORAGE_KEYS.STORY_ENTITIES]: [...SEED_STORY_ENTITIES],
   [STORAGE_KEYS.MEDIA]: [],
   [STORAGE_KEYS.CHAPTERS]: [],
   [STORAGE_KEYS.CHAPTER_STORIES]: [],
