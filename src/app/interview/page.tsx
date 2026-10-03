@@ -37,6 +37,8 @@ function InterviewContent() {
   const turnCountRef = useRef(0);
   const [activeMemorySpark, setActiveMemorySpark] = useState<string | null>(null);
   const usedHistoricalEventsRef = useRef<Set<string>>(new Set());
+  // Accumulate all user turns in memory — saved as one story on session end
+  const sessionTranscriptRef = useRef<string[]>([]);
 
   // Visual Stage state
   const [entities, setEntities] = useState<ExtractedEntity[]>([]);
@@ -178,13 +180,9 @@ function InterviewContent() {
       if (userText) {
         await triggerVisualEnrichment(userText);
 
-        // Save story turn to Supabase (skip in sandbox mode)
-        if (session && !isSandbox) {
-          try {
-            await saveStoryFromTranscript(session, userText);
-          } catch {
-            // Ignore
-          }
+        // Accumulate turn in memory — story saved on session end
+        if (userText.trim().length > 10) {
+          sessionTranscriptRef.current.push(userText.trim());
         }
 
         // Increment conversation turn count
@@ -276,11 +274,9 @@ function InterviewContent() {
 
         await triggerVisualEnrichment(textToProcess);
 
-        // Save story (skip in sandbox mode)
-        if (!isSandbox) {
-          try {
-            await saveStoryFromTranscript(activeSession, textToProcess);
-          } catch {}
+        // Accumulate turn in memory — story saved on session end
+        if (textToProcess.trim().length > 10) {
+          sessionTranscriptRef.current.push(textToProcess.trim());
         }
 
         // Increment conversation turn count
@@ -395,15 +391,44 @@ function InterviewContent() {
     };
   }, [engineMode, classicTranscript, classicIsListening, handleClassicProcess]);
 
-  const handleEndSession = useCallback(() => {
+  const handleEndSession = useCallback(async () => {
     if (engineMode === "gemini_live") {
       live.stopSession();
     } else {
       classicCancel();
       classicStopListening();
     }
+
+    // Consolidate all accumulated turns into one narrative story
+    const turns = sessionTranscriptRef.current;
+    if (!isSandbox && session && turns.length > 0) {
+      try {
+        const combinedTranscript = turns.join(" ");
+        // Call summarize API to get a narrative title + summary
+        const res = await fetch("/api/gemini/summarize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transcript: combinedTranscript }),
+        });
+        let summary: string | null = null;
+        let title: string = session.currentTopic || "Life Story Session";
+        if (res.ok) {
+          const data = await res.json();
+          summary = data.summary || null;
+          if (data.title) title = data.title;
+        }
+        await saveStoryFromTranscript(
+          { ...session, currentTopic: title },
+          combinedTranscript,
+          summary
+        );
+      } catch (err) {
+        console.warn("End-of-session story save failed:", err);
+      }
+    }
+
     router.push("/");
-  }, [engineMode, live, classicCancel, classicStopListening, router]);
+  }, [engineMode, live, classicCancel, classicStopListening, router, isSandbox, session]);
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();

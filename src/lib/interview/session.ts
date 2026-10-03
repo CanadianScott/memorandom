@@ -32,20 +32,22 @@ export async function createInterviewSession(mode: SessionMode): Promise<Intervi
   }
 }
 
-export async function saveStoryFromTranscript(session: InterviewSession, transcript: string): Promise<Story> {
-  let summary: string | null = null;
-  try {
-    const sumRes = await fetch("/api/gemini/summarize", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ transcript }),
-    });
-    if (sumRes.ok) {
-      const data = await sumRes.json();
-      if (data.summary) summary = data.summary;
+export async function saveStoryFromTranscript(session: InterviewSession, transcript: string, precomputedSummary?: string | null): Promise<Story> {
+  let summary: string | null = precomputedSummary ?? null;
+  if (!summary) {
+    try {
+      const sumRes = await fetch("/api/gemini/summarize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript }),
+      });
+      if (sumRes.ok) {
+        const data = await sumRes.json();
+        if (data.summary) summary = data.summary;
+      }
+    } catch {
+      // Summary generation failed non-critically — raw transcript will be used
     }
-  } catch {
-    // Summary generation failed non-critically — raw transcript will be used
   }
 
   const story = await createStory({
