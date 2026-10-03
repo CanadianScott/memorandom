@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
 Transform the following raw oral history interview into:
 1. A SHORT TITLE (5-8 words, specific and evocative — not generic like "Interview Session")
-2. A NARRATIVE (3-6 sentences, third person past tense, biography-quality prose). Capture emotional truth and specific details. Do NOT quote directly — paraphrase elegantly.
+2. A NARRATIVE in third person past tense, biography-quality prose. Write as much as the material warrants — from a single paragraph for brief sessions up to 500 words for rich, detailed ones. Capture emotional truth, preserve specific names, places, and details. Do NOT quote directly — paraphrase elegantly. Omit filler ("um", "uh", short meaningless answers).
 
 Raw transcript:
 "${transcript}"
