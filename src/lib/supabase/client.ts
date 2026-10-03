@@ -30,6 +30,7 @@ import {
   localGetChapterStories,
   localGetMedia,
   localSaveMedia,
+  localUpdateStory,
 } from "./local-store";
 
 const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -112,6 +113,23 @@ export async function createStory(storyData: StoryInsert): Promise<Story> {
   } catch (err) {
     console.warn("Supabase createStory failed, falling back to local story:", err);
     return localCreateStory(storyData);
+  }
+}
+
+export async function updateStory(id: string, updates: Partial<Pick<Story, "title" | "summary">>): Promise<void> {
+  if (!isSupabaseConfigured) {
+    localUpdateStory(id, updates);
+    return;
+  }
+  try {
+    const { error } = await supabase
+      .from("stories")
+      .update(updates as never)
+      .eq("id", id);
+    if (error) throw error;
+  } catch (err) {
+    console.warn("Supabase updateStory failed, falling back to local:", err);
+    localUpdateStory(id, updates);
   }
 }
 

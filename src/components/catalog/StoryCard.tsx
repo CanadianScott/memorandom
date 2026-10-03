@@ -60,8 +60,8 @@ export function StoryCard({
   });
 
   const title = story.title?.trim() || "Untitled Story";
-  const transcript = story.transcript || "";
-  const isLongTranscript = transcript.length > 200;
+  const displayText = story.summary || story.transcript || "";
+  const isLongText = displayText.length > 200;
 
   const renderTagChip = (entity: Entity) => {
     const isSelected =
@@ -116,24 +116,17 @@ export function StoryCard({
           </span>
         </div>
 
-        {/* Story Summary / Excerpt */}
-        {story.summary && (
-          <p className="text-sm font-serif italic text-warm-brown/90 mb-2 leading-relaxed">
-            {story.summary}
-          </p>
-        )}
-
-        {/* Transcript */}
+        {/* Story Content — prefer narrative summary over raw transcript */}
         <p
           className={`text-ink/75 text-sm leading-relaxed ${
             isExpanded ? "" : "line-clamp-3"
           }`}
         >
-          {transcript}
+          {displayText}
         </p>
 
         {/* Expand / Collapse Button */}
-        {isLongTranscript && (
+        {isLongText && (
           <button
             type="button"
             onClick={() => setIsExpanded((prev) => !prev)}

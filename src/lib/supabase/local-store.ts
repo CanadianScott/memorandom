@@ -336,6 +336,17 @@ export function localCreateStory(storyData: StoryInsert): Story {
   return newStory;
 }
 
+export function localUpdateStory(id: string, updates: Partial<Pick<Story, "title" | "summary">>): void {
+  const stories = getArray<Story>(STORAGE_KEYS.STORIES, SEED_STORIES);
+  const idx = stories.findIndex((s) => s.id === id);
+  if (idx >= 0) {
+    if (updates.title) stories[idx].title = updates.title;
+    if (updates.summary) stories[idx].summary = updates.summary;
+    stories[idx].updated_at = new Date().toISOString();
+    saveArray(STORAGE_KEYS.STORIES, stories);
+  }
+}
+
 export function localLinkStoryEntities(storyId: string, entityIds: string[]): StoryEntity[] {
   const links = getArray<StoryEntity>(STORAGE_KEYS.STORY_ENTITIES, SEED_STORY_ENTITIES);
   const newLinks: StoryEntity[] = entityIds.map((entityId) => ({

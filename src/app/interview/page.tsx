@@ -399,31 +399,51 @@ function InterviewContent() {
       classicStopListening();
     }
 
-    // Consolidate all accumulated turns into one narrative story
+    // Two-phase save: first save raw transcript (guaranteed), then enrich with narrative
     const turns = sessionTranscriptRef.current;
     if (!isSandbox && session && turns.length > 0) {
+      const combinedTranscript = turns.join(" ");
+
+      // Phase 1: Save story immediately with raw transcript (never loses data)
+      let savedStoryId: string | null = null;
       try {
-        const combinedTranscript = turns.join(" ");
-        // Call summarize API to get a narrative title + summary
-        const res = await fetch("/api/gemini/summarize", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ transcript: combinedTranscript }),
-        });
-        let summary: string | null = null;
-        let title: string = session.currentTopic || "Life Story Session";
-        if (res.ok) {
-          const data = await res.json();
-          summary = data.summary || null;
-          if (data.title) title = data.title;
-        }
-        await saveStoryFromTranscript(
-          { ...session, currentTopic: title },
+        const story = await saveStoryFromTranscript(
+          { ...session, currentTopic: session.currentTopic || "Life Story Session" },
           combinedTranscript,
-          summary
+          null // no summary yet — save raw first
         );
+        savedStoryId = story.id;
       } catch (err) {
-        console.warn("End-of-session story save failed:", err);
+        console.warn("Story save failed:", err);
+      }
+
+      // Phase 2: Generate narrative and update the saved story (best-effort)
+      if (savedStoryId) {
+        // Use a detached promise so navigation doesn't cancel it
+        const enrichStory = async () => {
+          try {
+            const res = await fetch("/api/gemini/summarize", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ transcript: combinedTranscript }),
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.summary || data.title) {
+                // Update the story directly in Supabase/localStorage
+                const { updateStory } = await import("@/lib/supabase/client");
+                await updateStory(savedStoryId!, {
+                  ...(data.summary ? { summary: data.summary } : {}),
+                  ...(data.title ? { title: data.title } : {}),
+                });
+              }
+            }
+          } catch (err) {
+            console.warn("Narrative enrichment failed (story saved with raw transcript):", err);
+          }
+        };
+        // Fire and forget — don't block navigation
+        enrichStory();
       }
     }
 
