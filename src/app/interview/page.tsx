@@ -24,12 +24,15 @@ function InterviewContent() {
   const router = useRouter();
   const mode = (searchParams.get("mode") as SessionMode) || "surprise_me";
   const isSandbox = searchParams.get("sandbox") === "true";
+  const promptParam = searchParams.get("prompt") || "";
 
   // Conversation Engine: "gemini_live" (real-time voice) or "classic" (turn-by-turn fallback)
   const [engineMode, setEngineMode] = useState<"gemini_live" | "classic">("gemini_live");
 
   const [session, setSession] = useState<InterviewSession | null>(null);
-  const [currentPrompt, setCurrentPrompt] = useState("Tap the microphone to start your Gemini Live conversation.");
+  const [currentPrompt, setCurrentPrompt] = useState(
+    promptParam || "Tap the microphone to start your Gemini Live conversation."
+  );
   const [graphSummary, setGraphSummary] = useState("");
 
   // Turn tracking and historical prompt injection
@@ -61,12 +64,39 @@ function InterviewContent() {
     setActiveLocation(loc);
   }, []);
 
+  // Initialize interview session on mount
+  useEffect(() => {
+    let isMounted = true;
+    async function initSession() {
+      try {
+        const [s, graph] = await Promise.all([
+          createInterviewSession(mode, promptParam || undefined),
+          getGraphSummary().catch(() => ""),
+        ]);
+        if (isMounted) {
+          setSession(s);
+          if (graph) {
+            setGraphSummary(graph);
+          }
+          if (promptParam) {
+            setCurrentPrompt(promptParam);
+          } else if (s.currentTopic) {
+            setCurrentPrompt(s.currentTopic);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to initialize interview session:", err);
+      }
+    }
+    initSession();
+    return () => {
+      isMounted = false;
+    };
+  }, [mode, promptParam]);
+
   // Text input fallback
   const [manualText, setManualText] = useState("");
   const [showManualInput, setShowManualInput] = useState(false);
-
-
-  // Helper to enrich visual stage
   const enrichVisuals = useCallback(async (query?: string, mapLoc?: string) => {
     if (mapLoc) {
       setActiveLocationTracked(mapLoc);
@@ -232,13 +262,14 @@ function InterviewContent() {
       try {
         let newSession: InterviewSession;
         try {
-          newSession = await createInterviewSession(mode);
+          newSession = await createInterviewSession(mode, promptParam || undefined);
         } catch {
           newSession = {
             id: `session-${Date.now()}`,
             mode,
+            currentTopic: promptParam || undefined,
             entitiesMentioned: [],
-            questionHistory: [],
+            questionHistory: promptParam ? [promptParam] : [],
           };
         }
         setSession(newSession);
@@ -401,18 +432,29 @@ function InterviewContent() {
 
     // Two-phase save: first save raw transcript (guaranteed), then enrich with narrative
     const turns = sessionTranscriptRef.current;
-    if (!isSandbox && session && turns.length > 0) {
+    if (!isSandbox && turns.length > 0) {
+      const activeSession: InterviewSession = session || {
+        id: `session-${Date.now()}`,
+        mode,
+        currentTopic: promptParam || currentPrompt || "Life Story Session",
+        entitiesMentioned: [],
+        questionHistory: promptParam ? [promptParam] : [],
+      };
       const combinedTranscript = turns.join(" ");
 
       // Phase 1: Save story immediately with raw transcript (never loses data)
       let savedStoryId: string | null = null;
       try {
         const story = await saveStoryFromTranscript(
-          { ...session, currentTopic: session.currentTopic || "Life Story Session" },
+          { ...activeSession, currentTopic: activeSession.currentTopic || "Life Story Session" },
           combinedTranscript,
           null // no summary yet — save raw first
         );
         savedStoryId = story.id;
+
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("memorandom:story-created"));
+        }
       } catch (err) {
         console.warn("Story save failed:", err);
       }

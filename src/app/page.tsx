@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { BookOpen, Upload, ScrollText } from "lucide-react";
-import { getStories, getEntities } from "@/lib/supabase/client";
+import { getStories, getEntities, getSuggestedPrompts } from "@/lib/supabase/client";
 import { StoryCatalog } from "@/components/catalog/StoryCatalog";
 import { SessionStarters } from "@/components/SessionStarters";
+import { PromptSuggestions } from "@/components/PromptSuggestions";
+import { HomeStats } from "@/components/HomeStats";
 
 export default async function HomePage() {
   const allStories = await getStories().catch(() => []);
   const entities = await getEntities().catch(() => []);
+  const initialPrompts = await getSuggestedPrompts().catch(() => []);
   
   const peopleCount = entities.filter(e => e.type === "person").length;
   const placesCount = entities.filter(e => e.type === "place").length;
@@ -41,22 +44,16 @@ export default async function HomePage() {
         </header>
 
         {/* Stats */}
-        <div className="flex justify-center gap-8 md:gap-16 mb-16 px-4">
-          <div className="text-center">
-            <p className="text-4xl font-serif text-warm-brown font-bold">{allStories.length}</p>
-            <p className="text-sm font-medium uppercase tracking-wider text-ink/60 mt-1">Stories</p>
-          </div>
-          <div className="text-center">
-            <p className="text-4xl font-serif text-warm-brown font-bold">{peopleCount}</p>
-            <p className="text-sm font-medium uppercase tracking-wider text-ink/60 mt-1">People</p>
-          </div>
-          <div className="text-center">
-            <p className="text-4xl font-serif text-warm-brown font-bold">{placesCount}</p>
-            <p className="text-sm font-medium uppercase tracking-wider text-ink/60 mt-1">Places</p>
-          </div>
-        </div>
+        <HomeStats
+          initialStoriesCount={allStories.length}
+          initialPeopleCount={peopleCount}
+          initialPlacesCount={placesCount}
+        />
 
         <SessionStarters />
+
+        {/* Prompts for Dad */}
+        <PromptSuggestions initialPrompts={initialPrompts} />
 
         {/* Story Catalog */}
         <StoryCatalog initialStories={allStories} initialEntities={entities} />

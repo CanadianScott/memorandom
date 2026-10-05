@@ -10,6 +10,9 @@ import {
   Media,
   Chapter,
   Json,
+  SuggestedPrompt,
+  SuggestedPromptInsert,
+  SuggestedPromptUpdate,
 } from "@/types/database";
 
 const STORAGE_KEYS = {
@@ -20,6 +23,7 @@ const STORAGE_KEYS = {
   MEDIA: "memorandom_media",
   CHAPTERS: "memorandom_chapters",
   CHAPTER_STORIES: "memorandom_chapter_stories",
+  SUGGESTED_PROMPTS: "memorandom_suggested_prompts",
 };
 
 const now = new Date().toISOString();
@@ -189,6 +193,33 @@ const SEED_STORY_ENTITIES: StoryEntity[] = [
   { story_id: "story-bio-overview", entity_id: "entity-event-plane", confidence: 1.0 },
 ];
 
+const SEED_SUGGESTED_PROMPTS: SuggestedPrompt[] = [
+  {
+    id: "prompt-seed-1",
+    prompt: "Dad, tell us about the day you bought your first airplane and took off from the grass runway in Idaho!",
+    suggested_by: "Melissa",
+    category: "Adventures & Flying",
+    status: "pending",
+    created_at: now,
+  },
+  {
+    id: "prompt-seed-2",
+    prompt: "What is your favorite memory of hiking in Waterton with Mom when we were little?",
+    suggested_by: "Jessica",
+    category: "Waterton & Outdoors",
+    status: "pending",
+    created_at: now,
+  },
+  {
+    id: "prompt-seed-3",
+    prompt: "How did you and Mom meet, and what was your first date like?",
+    suggested_by: "Scott",
+    category: "Family & Marriage",
+    status: "pending",
+    created_at: now,
+  },
+];
+
 // In-memory cache for server-side or environments without localStorage
 const memoryStore: Record<string, unknown[]> = {
   [STORAGE_KEYS.SESSIONS]: [],
@@ -198,6 +229,7 @@ const memoryStore: Record<string, unknown[]> = {
   [STORAGE_KEYS.MEDIA]: [],
   [STORAGE_KEYS.CHAPTERS]: [],
   [STORAGE_KEYS.CHAPTER_STORIES]: [],
+  [STORAGE_KEYS.SUGGESTED_PROMPTS]: [...SEED_SUGGESTED_PROMPTS],
 };
 
 function isBrowser(): boolean {
@@ -220,11 +252,11 @@ function getArray<T>(key: string, defaultSeed: T[] = []): T[] {
     }
   }
 
-  if (memoryStore[key]?.length) {
-    return memoryStore[key] as T[];
+  if (memoryStore[key] !== undefined) {
+    return [...(memoryStore[key] as T[])];
   }
   memoryStore[key] = [...defaultSeed];
-  return memoryStore[key] as T[];
+  return [...defaultSeed];
 }
 
 function saveArray<T>(key: string, data: T[]): void {
@@ -235,7 +267,7 @@ function saveArray<T>(key: string, data: T[]): void {
       // ignore
     }
   }
-  memoryStore[key] = data;
+  memoryStore[key] = [...data];
 }
 
 // Entity operations
@@ -321,7 +353,7 @@ export function localCreateStory(storyData: StoryInsert): Story {
   const stories = getArray<Story>(STORAGE_KEYS.STORIES, SEED_STORIES);
   const currentTime = new Date().toISOString();
   const newStory: Story = {
-    id: `story-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    id: storyData.id || `story-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     session_id: storyData.session_id ?? null,
     title: storyData.title ?? null,
     transcript: storyData.transcript,
@@ -369,6 +401,89 @@ export function localGetStoryEntities(storyId?: string): StoryEntity[] {
 
 export function localGetStories(): Story[] {
   return getArray<Story>(STORAGE_KEYS.STORIES, SEED_STORIES);
+}
+
+export function localDeleteStory(id: string): boolean {
+  const stories = getArray<Story>(STORAGE_KEYS.STORIES, SEED_STORIES);
+  const storyIndex = stories.findIndex((s) => s.id === id);
+  if (storyIndex === -1) {
+    return false;
+  }
+  stories.splice(storyIndex, 1);
+  saveArray(STORAGE_KEYS.STORIES, stories);
+
+  // Clean up linked story entities
+  const storyEntities = getArray<StoryEntity>(STORAGE_KEYS.STORY_ENTITIES, SEED_STORY_ENTITIES);
+  const filteredLinks = storyEntities.filter((se) => se.story_id !== id);
+  saveArray(STORAGE_KEYS.STORY_ENTITIES, filteredLinks);
+
+  // Clean up chapter stories junction
+  const chapterStories = getArray<{ chapter_id: string; story_id: string; display_order: number }>(
+    STORAGE_KEYS.CHAPTER_STORIES,
+    SEED_CHAPTER_STORIES
+  );
+  const filteredChapterStories = chapterStories.filter((cs) => cs.story_id !== id);
+  saveArray(STORAGE_KEYS.CHAPTER_STORIES, filteredChapterStories);
+
+  return true;
+}
+
+// Suggested Prompts operations
+export function localGetSuggestedPrompts(): SuggestedPrompt[] {
+  return getArray<SuggestedPrompt>(STORAGE_KEYS.SUGGESTED_PROMPTS, SEED_SUGGESTED_PROMPTS).sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+}
+
+export function localCreateSuggestedPrompt(data: SuggestedPromptInsert): SuggestedPrompt {
+  const prompts = getArray<SuggestedPrompt>(STORAGE_KEYS.SUGGESTED_PROMPTS, SEED_SUGGESTED_PROMPTS);
+  const currentTime = new Date().toISOString();
+  const targetId = data.id || `prompt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const newPrompt: SuggestedPrompt = {
+    id: targetId,
+    prompt: data.prompt.trim(),
+    suggested_by: (data.suggested_by?.trim()) || "Family Member",
+    category: data.category || null,
+    status: data.status || "pending",
+    created_at: data.created_at || currentTime,
+  };
+  const existingIdx = prompts.findIndex((p) => p.id === targetId);
+  if (existingIdx >= 0) {
+    prompts[existingIdx] = newPrompt;
+  } else {
+    prompts.unshift(newPrompt);
+  }
+  saveArray(STORAGE_KEYS.SUGGESTED_PROMPTS, prompts);
+  return newPrompt;
+}
+
+export function localUpdateSuggestedPrompt(
+  id: string,
+  updates: Partial<SuggestedPromptUpdate>
+): SuggestedPrompt | null {
+  const prompts = getArray<SuggestedPrompt>(STORAGE_KEYS.SUGGESTED_PROMPTS, SEED_SUGGESTED_PROMPTS);
+  const idx = prompts.findIndex((p) => p.id === id);
+  if (idx === -1) {
+    return null;
+  }
+  const updated: SuggestedPrompt = {
+    ...prompts[idx],
+    ...updates,
+  };
+  prompts[idx] = updated;
+  saveArray(STORAGE_KEYS.SUGGESTED_PROMPTS, prompts);
+  return updated;
+}
+
+export function localDeleteSuggestedPrompt(id: string): boolean {
+  const prompts = getArray<SuggestedPrompt>(STORAGE_KEYS.SUGGESTED_PROMPTS, SEED_SUGGESTED_PROMPTS);
+  const idx = prompts.findIndex((p) => p.id === id);
+  if (idx === -1) {
+    return false;
+  }
+  prompts.splice(idx, 1);
+  saveArray(STORAGE_KEYS.SUGGESTED_PROMPTS, prompts);
+  return true;
 }
 
 // Chapter operations

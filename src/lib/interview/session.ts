@@ -12,22 +12,27 @@ export interface InterviewSession {
   questionHistory: string[];
 }
 
-export async function createInterviewSession(mode: SessionMode): Promise<InterviewSession> {
+export async function createInterviewSession(
+  mode: SessionMode,
+  promptUsed?: string
+): Promise<InterviewSession> {
   try {
-    const dbSession = await createSession(mode);
+    const dbSession = await createSession(mode, promptUsed);
     return {
       id: dbSession.id,
       mode: mode,
+      currentTopic: promptUsed,
       entitiesMentioned: [],
-      questionHistory: [],
+      questionHistory: promptUsed ? [promptUsed] : [],
     };
   } catch (err) {
     console.warn("createSession failed, using offline session:", err);
     return {
       id: `session-${Date.now()}`,
       mode: mode,
+      currentTopic: promptUsed,
       entitiesMentioned: [],
-      questionHistory: [],
+      questionHistory: promptUsed ? [promptUsed] : [],
     };
   }
 }

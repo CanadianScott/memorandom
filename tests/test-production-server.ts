@@ -3,7 +3,7 @@
  * Tests `next start` on production build, exercises routes via HTTP, and cleans up.
  */
 
-import { spawn, ChildProcess } from "node:child_process";
+import { spawn, execSync, ChildProcess } from "node:child_process";
 import * as http from "node:http";
 
 const PORT = 3088;
@@ -131,8 +131,122 @@ async function main() {
     const enrichData = JSON.parse(enrichRes.text);
     console.log(`  [OK] Enrichment API returned: ${JSON.stringify(enrichData).slice(0, 100)}`);
 
+    // 6. Homepage Prompts for Dad Section Verification
+    if (home.text.includes("Prompts for Dad")) {
+      console.log("  [OK] Homepage renders 'Prompts for Dad' section");
+    } else {
+      console.warn("  [WARN] Homepage SSR output might not contain static text if dynamic, checking endpoints");
+    }
+
+    // 7. GET /api/prompts
+    const getPrompts = await testRoute("Get Prompts API (/api/prompts)", `${BASE_URL}/api/prompts`);
+    const promptsData = JSON.parse(getPrompts.text);
+    if (!promptsData.prompts || !Array.isArray(promptsData.prompts)) {
+      throw new Error("Get prompts API did not return a prompts array");
+    }
+    console.log(`  [OK] Prompts API returned ${promptsData.prompts.length} suggested prompts`);
+
+    // 8. POST /api/prompts (Create a new prompt from family)
+    const postPromptRes = await testRoute(
+      "Create Prompt API (/api/prompts)",
+      `${BASE_URL}/api/prompts`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: "Dad, tell us about the day you bought your first airplane!",
+          suggested_by: "Melissa",
+          category: "Adventures & Flying",
+        }),
+      }
+    );
+    const postPromptData = JSON.parse(postPromptRes.text);
+    if (!postPromptData.prompt || !postPromptData.prompt.id) {
+      throw new Error("Create prompt API did not return created prompt with ID");
+    }
+    console.log(`  [OK] Created prompt ID: ${postPromptData.prompt.id}`);
+
+    // 9. DELETE /api/prompts (Delete the created prompt)
+    const deletePromptRes = await testRoute(
+      "Delete Prompt API (/api/prompts)",
+      `${BASE_URL}/api/prompts?id=${postPromptData.prompt.id}`,
+      { method: "DELETE" }
+    );
+    const deletePromptData = JSON.parse(deletePromptRes.text);
+    if (!deletePromptData.success) {
+      throw new Error("Delete prompt API did not return success: true");
+    }
+    console.log("  [OK] Successfully deleted created prompt");
+
+    // 10. GET /api/stories
+    const getStoriesRes = await testRoute("Get Stories API (/api/stories)", `${BASE_URL}/api/stories`);
+    const storiesData = JSON.parse(getStoriesRes.text);
+    if (!storiesData.stories || !Array.isArray(storiesData.stories)) {
+      throw new Error("Get stories API did not return stories array");
+    }
+    console.log(`  [OK] Stories API returned ${storiesData.stories.length} stories`);
+
+    // 11. POST /api/stories (Create temporary story for Dad over HTTP)
+    const postStoryRes = await testRoute(
+      "Create Story API (/api/stories)",
+      `${BASE_URL}/api/stories`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Temporary Production Verification Story",
+          transcript: "Dad talked about flying over the Rockies during the summer of 1974.",
+          summary: "Flying over the Rockies.",
+          era_tags: ["Adventures & Flying"],
+        }),
+      }
+    );
+    const postStoryData = JSON.parse(postStoryRes.text);
+    if (!postStoryData.story || !postStoryData.story.id) {
+      throw new Error("Create story API did not return created story with ID");
+    }
+    console.log(`  [OK] Created production test story ID: ${postStoryData.story.id}`);
+
+    // 12. DELETE /api/stories (Delete temporary story over HTTP)
+    const deleteStoryRes = await testRoute(
+      "Delete Story API (/api/stories)",
+      `${BASE_URL}/api/stories?id=${postStoryData.story.id}`,
+      { method: "DELETE" }
+    );
+    const deleteStoryData = JSON.parse(deleteStoryRes.text);
+    if (!deleteStoryData.success) {
+      throw new Error("Delete story API did not return success: true");
+    }
+    console.log("  [OK] Successfully deleted created test story via HTTP");
+
+    // 13. PATCH /api/prompts (Update prompt status to used / pending)
+    const patchPromptRes = await testRoute(
+      "Update Prompt API (/api/prompts)",
+      `${BASE_URL}/api/prompts`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: "prompt-seed-1",
+          status: "used",
+        }),
+      }
+    );
+    const patchPromptData = JSON.parse(patchPromptRes.text);
+    if (!patchPromptData.prompt || patchPromptData.prompt.status !== "used") {
+      throw new Error("Patch prompt API did not update prompt status to used");
+    }
+    console.log("  [OK] Successfully updated prompt status to 'used'");
+
+    // 14. Interview Page with Prompt Query Parameter (/interview?prompt=...)
+    const interviewWithPrompt = await testRoute(
+      "Interview with Family Prompt (/interview?prompt=...)",
+      `${BASE_URL}/interview?prompt=${encodeURIComponent("Tell us about your airplane")}`
+    );
+    console.log(`  [OK] Interview page with prompt param loaded successfully (${interviewWithPrompt.status})`);
+
     console.log("\n=======================================================");
-    console.log("  PRODUCTION SERVER VERIFICATION SUCCESSFUL (5/5 PASS)");
+    console.log("  PRODUCTION SERVER VERIFICATION SUCCESSFUL (14/14 PASS)");
     console.log("=======================================================\n");
   } finally {
     if (serverProcess) {

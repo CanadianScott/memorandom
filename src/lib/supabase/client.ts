@@ -16,6 +16,9 @@ import {
   ArtStyle,
   Chapter,
   Json,
+  SuggestedPrompt,
+  SuggestedPromptInsert,
+  SuggestedPromptUpdate,
 } from "@/types/database";
 import {
   localGetEntities,
@@ -23,6 +26,7 @@ import {
   localCreateSession,
   localEndSession,
   localCreateStory,
+  localDeleteStory,
   localLinkStoryEntities,
   localGetStoryEntities,
   localGetStories,
@@ -31,6 +35,10 @@ import {
   localGetMedia,
   localSaveMedia,
   localUpdateStory,
+  localGetSuggestedPrompts,
+  localCreateSuggestedPrompt,
+  localUpdateSuggestedPrompt,
+  localDeleteSuggestedPrompt,
 } from "./local-store";
 
 const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -130,6 +138,21 @@ export async function updateStory(id: string, updates: Partial<Pick<Story, "titl
   } catch (err) {
     console.warn("Supabase updateStory failed, falling back to local:", err);
     localUpdateStory(id, updates);
+  }
+}
+
+export async function deleteStory(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured) {
+    return localDeleteStory(id);
+  }
+  try {
+    const { error } = await supabase.from("stories").delete().eq("id", id);
+    if (error) throw error;
+    localDeleteStory(id);
+    return true;
+  } catch (err) {
+    console.warn("Supabase deleteStory failed, falling back to local:", err);
+    return localDeleteStory(id);
   }
 }
 
@@ -499,5 +522,84 @@ export async function endSession(id: string): Promise<Session> {
   } catch (err) {
     console.warn("Supabase endSession failed, using local session:", err);
     return localEndSession(id);
+  }
+}
+
+export async function getSuggestedPrompts(): Promise<SuggestedPrompt[]> {
+  if (!isSupabaseConfigured) {
+    return localGetSuggestedPrompts();
+  }
+  try {
+    const { data, error } = await supabase
+      .from("suggested_prompts")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data as unknown as SuggestedPrompt[]) ?? [];
+  } catch (err) {
+    console.warn("Supabase getSuggestedPrompts failed, using local prompts:", err);
+    return localGetSuggestedPrompts();
+  }
+}
+
+export async function createSuggestedPrompt(
+  promptData: SuggestedPromptInsert
+): Promise<SuggestedPrompt> {
+  if (!isSupabaseConfigured) {
+    return localCreateSuggestedPrompt(promptData);
+  }
+  try {
+    const { data, error } = await supabase
+      .from("suggested_prompts")
+      .insert(promptData as never)
+      .select()
+      .single();
+    if (error) throw error;
+    localCreateSuggestedPrompt(data as unknown as SuggestedPromptInsert);
+    return data as unknown as SuggestedPrompt;
+  } catch (err) {
+    console.warn("Supabase createSuggestedPrompt failed, using local store:", err);
+    return localCreateSuggestedPrompt(promptData);
+  }
+}
+
+export async function updateSuggestedPrompt(
+  id: string,
+  updates: Partial<SuggestedPromptUpdate>
+): Promise<SuggestedPrompt | null> {
+  if (!isSupabaseConfigured) {
+    return localUpdateSuggestedPrompt(id, updates);
+  }
+  try {
+    const { data, error } = await supabase
+      .from("suggested_prompts")
+      .update(updates as never)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    localUpdateSuggestedPrompt(id, updates);
+    return data as unknown as SuggestedPrompt;
+  } catch (err) {
+    console.warn("Supabase updateSuggestedPrompt failed, using local store:", err);
+    return localUpdateSuggestedPrompt(id, updates);
+  }
+}
+
+export async function deleteSuggestedPrompt(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured) {
+    return localDeleteSuggestedPrompt(id);
+  }
+  try {
+    const { error } = await supabase
+      .from("suggested_prompts")
+      .delete()
+      .eq("id", id);
+    if (error) throw error;
+    localDeleteSuggestedPrompt(id);
+    return true;
+  } catch (err) {
+    console.warn("Supabase deleteSuggestedPrompt failed, using local store:", err);
+    return localDeleteSuggestedPrompt(id);
   }
 }

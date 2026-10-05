@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Clock, MapPin, Users, Calendar, Tag, X } from "lucide-react";
-import { StoryWithDetails, getStories, getEntities } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { Clock, MapPin, Users, Calendar, Tag, X, CheckCircle } from "lucide-react";
+import { StoryWithDetails, getStories, getEntities, deleteStory } from "@/lib/supabase/client";
 import { Entity } from "@/types/database";
 import { StoryCard } from "./StoryCard";
 
@@ -26,10 +27,34 @@ export function StoryCatalog({
   initialStories,
   initialEntities = [],
 }: StoryCatalogProps) {
+  const router = useRouter();
   const [stories, setStories] = useState<StoryWithDetails[]>(initialStories);
   const [entities, setEntities] = useState<Entity[]>(initialEntities);
   const [sortBy, setSortBy] = useState<SortOption>("recency");
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
+  const [deleteToastMessage, setDeleteToastMessage] = useState<string | null>(null);
+
+  const handleDeleteStory = async (storyId: string) => {
+    try {
+      await deleteStory(storyId);
+      setStories((prev) => prev.filter((s) => s.id !== storyId));
+      setDeleteToastMessage("Story deleted successfully.");
+      setTimeout(() => setDeleteToastMessage(null), 3500);
+
+      // Notify reactive components (e.g. HomeStats)
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("memorandom:story-deleted", { detail: { storyId } })
+        );
+      }
+
+      try {
+        router.refresh();
+      } catch {}
+    } catch (err) {
+      console.error("Failed to delete story:", err);
+    }
+  };
 
   // Synchronize client-side with local storage / Supabase on mount
   useEffect(() => {
@@ -41,10 +66,10 @@ export function StoryCatalog({
           getEntities(),
         ]);
         if (isMounted) {
-          if (freshStories && freshStories.length > 0) {
+          if (Array.isArray(freshStories)) {
             setStories(freshStories);
           }
-          if (freshEntities && freshEntities.length > 0) {
+          if (Array.isArray(freshEntities) && freshEntities.length > 0) {
             setEntities(freshEntities);
           }
         }
@@ -493,6 +518,7 @@ export function StoryCatalog({
               story={story}
               onSelectEntity={handleSelectEntity}
               activeEntityId={selectedEntity?.id}
+              onDeleteStory={handleDeleteStory}
             />
           ))}
         </div>
@@ -527,6 +553,7 @@ export function StoryCatalog({
                     story={story}
                     onSelectEntity={handleSelectEntity}
                     activeEntityId={selectedEntity?.id}
+                    onDeleteStory={handleDeleteStory}
                   />
                 ))}
               </div>
@@ -564,6 +591,7 @@ export function StoryCatalog({
                     story={story}
                     onSelectEntity={handleSelectEntity}
                     activeEntityId={selectedEntity?.id}
+                    onDeleteStory={handleDeleteStory}
                   />
                 ))}
               </div>
@@ -601,12 +629,25 @@ export function StoryCatalog({
                     story={story}
                     onSelectEntity={handleSelectEntity}
                     activeEntityId={selectedEntity?.id}
+                    onDeleteStory={handleDeleteStory}
                   />
                 ))}
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {/* Delete Feedback Toast */}
+      {deleteToastMessage && (
+        <aside
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl bg-warm-brown text-white text-sm font-medium shadow-xl flex items-center gap-2.5 animate-fadeIn border border-white/20"
+        >
+          <CheckCircle className="w-4 h-4 text-emerald-300 shrink-0" />
+          <span>{deleteToastMessage}</span>
+        </aside>
       )}
     </section>
   );

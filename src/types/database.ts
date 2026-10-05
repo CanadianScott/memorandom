@@ -306,12 +306,45 @@ export type ChapterStoryUpdate = {
   display_order?: number;
 };
 
+export type SuggestedPrompt = {
+  id: string;
+  prompt: string;
+  suggested_by: string;
+  category: string | null;
+  status: 'pending' | 'used';
+  created_at: string;
+};
+
+export type SuggestedPromptInsert = {
+  id?: string;
+  prompt: string;
+  suggested_by?: string;
+  category?: string | null;
+  status?: 'pending' | 'used';
+  created_at?: string;
+};
+
+export type SuggestedPromptUpdate = {
+  id?: string;
+  prompt?: string;
+  suggested_by?: string;
+  category?: string | null;
+  status?: 'pending' | 'used';
+  created_at?: string;
+};
+
 export type MediaItem = Media;
 export type BiographicalEntity = Entity;
 
 export type Database = {
   public: {
     Tables: {
+      suggested_prompts: {
+        Row: SuggestedPrompt;
+        Insert: SuggestedPromptInsert;
+        Update: SuggestedPromptUpdate;
+        Relationships: [];
+      };
       sessions: {
         Row: Session;
         Insert: SessionInsert;

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { User, MapPin, Clock, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { User, MapPin, Clock, Sparkles, ChevronDown, ChevronUp, Trash2, AlertCircle } from "lucide-react";
 import { StoryWithDetails } from "@/lib/supabase/client";
 import { Entity } from "@/types/database";
 
@@ -9,14 +9,18 @@ export interface StoryCardProps {
   story: StoryWithDetails;
   onSelectEntity?: (entity: Entity) => void;
   activeEntityId?: string | null;
+  onDeleteStory?: (storyId: string) => Promise<void> | void;
 }
 
 export function StoryCard({
   story,
   onSelectEntity,
   activeEntityId,
+  onDeleteStory,
 }: StoryCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Extract unique entities linked to this story
   const linkedEntities: Entity[] = React.useMemo(() => {
@@ -103,6 +107,18 @@ export function StoryCard({
     );
   };
 
+  const handleDeleteConfirm = async () => {
+    if (!onDeleteStory) return;
+    try {
+      setIsDeleting(true);
+      await onDeleteStory(story.id);
+    } catch (err) {
+      console.error("Failed to delete story:", err);
+      setIsDeleting(false);
+      setIsConfirmingDelete(false);
+    }
+  };
+
   return (
     <article className="rounded-2xl border border-warm-brown/15 bg-white/75 p-6 shadow-xs backdrop-blur-xs flex flex-col justify-between hover:border-warm-brown/30 hover:shadow-sm transition-all duration-200">
       <div>
@@ -111,10 +127,51 @@ export function StoryCard({
           <h3 className="font-serif font-bold text-lg md:text-xl text-ink leading-snug tracking-tight">
             {title}
           </h3>
-          <span className="text-xs font-medium px-2.5 py-1 bg-warm-brown/10 text-warm-brown rounded-full whitespace-nowrap shrink-0">
-            {formattedDate}
-          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs font-medium px-2.5 py-1 bg-warm-brown/10 text-warm-brown rounded-full whitespace-nowrap">
+              {formattedDate}
+            </span>
+            {onDeleteStory && (
+              <button
+                type="button"
+                onClick={() => setIsConfirmingDelete(true)}
+                aria-label={`Delete story: ${title}`}
+                title="Delete this story"
+                className="p-1 rounded-lg text-ink/40 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Delete Confirmation Banner */}
+        {isConfirmingDelete && (
+          <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 font-medium">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>Delete this story permanently?</span>
+            </div>
+            <div className="flex items-center gap-2 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setIsConfirmingDelete(false)}
+                disabled={isDeleting}
+                className="px-2.5 py-1 rounded-md bg-white border border-gray-200 text-ink/70 hover:bg-gray-50 text-xs font-medium cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
+                className="px-2.5 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs font-semibold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Story Content — prefer narrative summary over raw transcript */}
         <p
