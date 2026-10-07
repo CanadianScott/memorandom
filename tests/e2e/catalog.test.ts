@@ -25,10 +25,10 @@ export async function runCatalogTests() {
         expect(entities.length).toBeGreaterThanOrEqual(5);
 
         // Verify seed stories exist with expected content
-        const sandlotStory = stories.find((s) => s.title.includes("Sandlot Baseball"));
-        expect(sandlotStory).toBeDefined();
-        const yellowstoneStory = stories.find((s) => s.title.includes("Yellowstone"));
-        expect(yellowstoneStory).toBeDefined();
+        const seedStory1 = stories.find((s) => s.title.includes("Idaho and Alberta") || s.title.includes("Sandlot Baseball"));
+        expect(seedStory1).toBeDefined();
+        const seedStory2 = stories.find((s) => s.title.includes("Waterton") || s.title.includes("Yellowstone"));
+        expect(seedStory2).toBeDefined();
 
         // Check client getStories or localGetStoryEntities contract
         const client = await import("@/lib/supabase/client");

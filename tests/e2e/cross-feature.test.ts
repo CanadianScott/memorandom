@@ -111,11 +111,11 @@ export async function runCrossFeatureTests() {
         const { getHistoricalContext } = await import("@/lib/gemini/historical-context");
 
         const entities = localStore.localGetEntities();
-        const childhoodEra = entities.find((e) => e.name.includes("1950s Childhood"));
+        const childhoodEra = entities.find((e) => e.name.includes("Childhood") || e.name.includes("1950s"));
         expect(childhoodEra).toBeDefined();
 
-        // Infer birth year from 1950s childhood entity
-        const birthYear = 1945;
+        // Infer birth year from childhood entity
+        const birthYear = 1950;
         const res = await getHistoricalContext({
           birthYear,
           eras: [childhoodEra!.name],

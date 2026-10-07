@@ -714,7 +714,11 @@ export function selectFromFallbackMatrix(
   const bumpStart = birthYear + 10;
   const bumpEnd = birthYear + 25;
 
-  const excludedSet = new Set(excludeEventNames.map((e) => e.toLowerCase().trim()));
+  const excludedSet = new Set(
+    (excludeEventNames || [])
+      .filter((e): e is string => typeof e === "string" && Boolean(e))
+      .map((e) => e.toLowerCase().trim())
+  );
 
   // Normalize search locations
   const normalizedLocs = locations

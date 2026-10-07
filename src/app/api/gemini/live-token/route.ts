@@ -36,7 +36,7 @@ export async function POST() {
 
     return NextResponse.json({
       token: token.name,
-      model: "gemini-3.1-flash-live-preview",
+      model: "gemini-3.8-live",
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Internal server error";

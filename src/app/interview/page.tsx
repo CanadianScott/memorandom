@@ -17,7 +17,7 @@ import { HistoricalContextResponse, HistoricalPromptItem } from "@/types/histori
 import { SessionMode } from "@/types/database";
 import { ExtractedEntity } from "@/types/entities";
 import { CarouselItem } from "@/components/visual-stage/ImageCarousel";
-import { Sparkles, Radio, Keyboard, Send, RefreshCw, Image as ImageIcon, MapPin, Home } from "lucide-react";
+import { Sparkles, Radio, Keyboard, Send, RefreshCw, Image as ImageIcon, MapPin, Home, ScrollText } from "lucide-react";
 
 function InterviewContent() {
   const searchParams = useSearchParams();
@@ -34,6 +34,8 @@ function InterviewContent() {
     promptParam || "Tap the microphone to start your Gemini Live conversation."
   );
   const [graphSummary, setGraphSummary] = useState("");
+  const [isSavingSession, setIsSavingSession] = useState(false);
+  const [savingStatus, setSavingStatus] = useState("Weaving story into biographical narrative...");
 
   // Turn tracking and historical prompt injection
   const [, setTurnCount] = useState(0);
@@ -423,6 +425,8 @@ function InterviewContent() {
   }, [engineMode, classicTranscript, classicIsListening, handleClassicProcess]);
 
   const handleEndSession = useCallback(async () => {
+    if (isSavingSession) return;
+
     if (engineMode === "gemini_live") {
       live.stopSession();
     } else {
@@ -430,9 +434,40 @@ function InterviewContent() {
       classicStopListening();
     }
 
-    // Two-phase save: first save raw transcript (guaranteed), then enrich with narrative
-    const turns = sessionTranscriptRef.current;
+    // Collect all user speech turns across conversation history, session transcript, and current speech
+    const turns: string[] = [];
+
+    // 1. From live conversation turns
+    if (live.conversationTurns && live.conversationTurns.length > 0) {
+      for (const turn of live.conversationTurns) {
+        if (turn.role === "user" && turn.text && turn.text.trim().length > 5 && !turns.includes(turn.text.trim())) {
+          turns.push(turn.text.trim());
+        }
+      }
+    }
+
+    // 2. From accumulated session transcript ref
+    for (const t of sessionTranscriptRef.current) {
+      if (t.trim().length > 5 && !turns.includes(t.trim())) {
+        turns.push(t.trim());
+      }
+    }
+
+    // 3. From current unfinalized spoken turn
+    const currentSpoken = (engineMode === "gemini_live" ? live.userTranscript : classicTranscript)?.trim();
+    if (currentSpoken && currentSpoken.length > 5 && !turns.includes(currentSpoken)) {
+      turns.push(currentSpoken);
+    }
+
+    // 4. From manual text input
+    if (manualText.trim() && manualText.trim().length > 5 && !turns.includes(manualText.trim())) {
+      turns.push(manualText.trim());
+    }
+
     if (!isSandbox && turns.length > 0) {
+      setIsSavingSession(true);
+      setSavingStatus("Crafting biographical narrative...");
+
       const activeSession: InterviewSession = session || {
         id: `session-${Date.now()}`,
         mode,
@@ -440,57 +475,86 @@ function InterviewContent() {
         entitiesMentioned: [],
         questionHistory: promptParam ? [promptParam] : [],
       };
-      const combinedTranscript = turns.join(" ");
+      const combinedTranscript = turns.join("\n\n");
 
-      // Phase 1: Save story immediately with raw transcript (never loses data)
-      let savedStoryId: string | null = null;
+      let summary: string | null = null;
+      let title: string = activeSession.currentTopic || "Life Story Session";
+
       try {
-        const story = await saveStoryFromTranscript(
-          { ...activeSession, currentTopic: activeSession.currentTopic || "Life Story Session" },
+        setSavingStatus("Weaving memories into biographical prose...");
+        const res = await fetch("/api/gemini/summarize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            transcript: combinedTranscript,
+            topic: activeSession.currentTopic,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (
+            data.summary &&
+            typeof data.summary === "string" &&
+            data.summary.trim().length > 15 &&
+            data.summary.trim() !== combinedTranscript.trim()
+          ) {
+            summary = data.summary.trim();
+          }
+          if (data.title && typeof data.title === "string" && !data.title.toLowerCase().includes("untitled")) {
+            title = data.title.trim();
+          }
+        }
+      } catch (err) {
+        console.warn("Summarize fetch failed, using fallback synthesizer:", err);
+      }
+
+      // If summarization fetch didn't return a summary, run fallback synthesis directly
+      if (!summary) {
+        const { synthesizeBiographicalFallback } = await import("@/lib/gemini/summarize");
+        const fallback = synthesizeBiographicalFallback(combinedTranscript, title);
+        summary = fallback.summary;
+        if (fallback.title && (!title || title === "Life Story Session" || title.toLowerCase().includes("untitled"))) {
+          title = fallback.title;
+        }
+      }
+
+      setSavingStatus("Saving narrative to your memoir...");
+      try {
+        await saveStoryFromTranscript(
+          { ...activeSession, currentTopic: title },
           combinedTranscript,
-          null // no summary yet — save raw first
+          summary,
+          title
         );
-        savedStoryId = story.id;
 
         if (typeof window !== "undefined") {
           window.dispatchEvent(new CustomEvent("memorandom:story-created"));
         }
       } catch (err) {
-        console.warn("Story save failed:", err);
+        console.error("Story save failed:", err);
       }
 
-      // Phase 2: Generate narrative and update the saved story (best-effort)
-      if (savedStoryId) {
-        // Use a detached promise so navigation doesn't cancel it
-        const enrichStory = async () => {
-          try {
-            const res = await fetch("/api/gemini/summarize", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ transcript: combinedTranscript }),
-            });
-            if (res.ok) {
-              const data = await res.json();
-              if (data.summary || data.title) {
-                // Update the story directly in Supabase/localStorage
-                const { updateStory } = await import("@/lib/supabase/client");
-                await updateStory(savedStoryId!, {
-                  ...(data.summary ? { summary: data.summary } : {}),
-                  ...(data.title ? { title: data.title } : {}),
-                });
-              }
-            }
-          } catch (err) {
-            console.warn("Narrative enrichment failed (story saved with raw transcript):", err);
-          }
-        };
-        // Fire and forget — don't block navigation
-        enrichStory();
-      }
+      setSavingStatus("Memoir chapter ready! Returning home...");
+      await new Promise((r) => setTimeout(r, 600));
     }
 
     router.push("/");
-  }, [engineMode, live, classicCancel, classicStopListening, router, isSandbox, session]);
+  }, [
+    engineMode,
+    live,
+    classicCancel,
+    classicStopListening,
+    router,
+    isSandbox,
+    session,
+    mode,
+    promptParam,
+    currentPrompt,
+    classicTranscript,
+    manualText,
+    isSavingSession,
+  ]);
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -740,6 +804,35 @@ function InterviewContent() {
           onTabChange={setVisualStageTabTracked}
         />
       </aside>
+
+      {/* Saving and Biographical Narrative Synthesis Modal */}
+      {isSavingSession && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 backdrop-blur-sm p-4 animate-fadeIn"
+        >
+          <div className="bg-cream border border-warm-brown/30 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-5">
+            <div className="w-16 h-16 rounded-full bg-warm-brown/10 text-warm-brown mx-auto flex items-center justify-center animate-pulse">
+              <ScrollText className="w-8 h-8" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-serif font-bold text-warm-brown tracking-tight">
+                Preserving Your Story
+              </h3>
+              <p className="text-sm text-ink/80 mt-2 font-serif italic">
+                {savingStatus}
+              </p>
+            </div>
+            <div className="w-full bg-warm-brown/15 rounded-full h-2 overflow-hidden">
+              <div className="bg-warm-brown h-2 rounded-full w-2/3 animate-pulse" />
+            </div>
+            <p className="text-xs text-ink/55">
+              Transforming spoken interview into a third-person biographical narrative...
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

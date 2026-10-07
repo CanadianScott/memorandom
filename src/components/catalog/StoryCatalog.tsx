@@ -83,6 +83,50 @@ export function StoryCatalog({
     };
   }, []);
 
+  // Auto-heal stories in storage that are missing a biographical narrative
+  useEffect(() => {
+    let isMounted = true;
+    async function autoHealStories() {
+      const needsHeal = stories.filter(
+        (s) => !s.summary || s.summary.trim().length < 10 || s.summary === s.transcript
+      );
+      if (needsHeal.length === 0) return;
+
+      const { updateStory } = await import("@/lib/supabase/client");
+      for (const s of needsHeal) {
+        try {
+          const res = await fetch("/api/gemini/summarize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ transcript: s.transcript, topic: s.title }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.summary && isMounted) {
+              const updatedFields: { summary: string; title?: string } = {
+                summary: data.summary,
+              };
+              if (data.title && (!s.title || s.title === "Interview Segment" || s.title === "Untitled Story")) {
+                updatedFields.title = data.title;
+              }
+              await updateStory(s.id, updatedFields);
+              setStories((prev) =>
+                prev.map((item) => (item.id === s.id ? { ...item, ...updatedFields } : item))
+              );
+            }
+          }
+        } catch (err) {
+          console.warn("Failed to auto-heal story narrative:", err);
+        }
+      }
+    }
+
+    autoHealStories();
+    return () => {
+      isMounted = false;
+    };
+  }, [stories.length]);
+
   // Filter stories when an entity is selected
   const filteredStories = useMemo(() => {
     if (!selectedEntity) {

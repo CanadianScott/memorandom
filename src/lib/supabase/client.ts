@@ -107,20 +107,30 @@ export async function upsertEntity(entity: EntityInsert): Promise<Entity> {
 }
 
 export async function createStory(storyData: StoryInsert): Promise<Story> {
+  const sanitized = { ...storyData };
+  if (!sanitized.summary || sanitized.summary.trim().length < 10 || sanitized.summary.trim() === sanitized.transcript.trim()) {
+    const { synthesizeBiographicalFallback } = await import("@/lib/gemini/summarize");
+    const fallback = synthesizeBiographicalFallback(sanitized.transcript, sanitized.title || undefined);
+    sanitized.summary = fallback.summary;
+    if (!sanitized.title || sanitized.title === "Interview Segment" || sanitized.title.toLowerCase().includes("untitled")) {
+      sanitized.title = fallback.title;
+    }
+  }
+
   if (!isSupabaseConfigured) {
-    return localCreateStory(storyData);
+    return localCreateStory(sanitized);
   }
   try {
     const { data: story, error } = await supabase
       .from("stories")
-      .insert(storyData as never)
+      .insert(sanitized as never)
       .select()
       .single();
     if (error) throw error;
     return story as Story;
   } catch (err) {
     console.warn("Supabase createStory failed, falling back to local story:", err);
-    return localCreateStory(storyData);
+    return localCreateStory(sanitized);
   }
 }
 

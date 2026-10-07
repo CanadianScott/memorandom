@@ -22,10 +22,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    let summary = body?.summary?.trim() || null;
+    let title = body?.title?.trim() || "Life Story Memory";
+
+    if (!summary || summary.length < 10 || summary === transcript) {
+      const { generateBiographicalNarrative, synthesizeBiographicalFallback } = await import("@/lib/gemini/summarize");
+      try {
+        const narrativeResult = await generateBiographicalNarrative(transcript, title);
+        summary = narrativeResult.summary;
+        if (narrativeResult.title && (!body?.title || body?.title === "Untitled Story")) {
+          title = narrativeResult.title;
+        }
+      } catch {
+        const fallback = synthesizeBiographicalFallback(transcript, title);
+        summary = fallback.summary;
+        if (!body?.title || body?.title === "Untitled Story") {
+          title = fallback.title;
+        }
+      }
+    }
+
     const story = await createStory({
-      title: body?.title?.trim() || "Untitled Story",
+      title,
       transcript,
-      summary: body?.summary?.trim() || null,
+      summary,
       era_tags: body?.era_tags || [],
       session_id: body?.session_id || null,
     });

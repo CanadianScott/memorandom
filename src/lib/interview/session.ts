@@ -2,6 +2,7 @@ import { createSession, createStory, linkStoryEntities } from "../supabase/clien
 import { SessionMode, Story } from "@/types/database";
 import { extractEntities } from "../gemini/entities";
 import { upsertExtractedEntities } from "./knowledge-graph";
+import { generateBiographicalNarrative, synthesizeBiographicalFallback } from "../gemini/summarize";
 
 export interface InterviewSession {
   id: string;
@@ -37,14 +38,43 @@ export async function createInterviewSession(
   }
 }
 
-export async function saveStoryFromTranscript(session: InterviewSession, transcript: string, precomputedSummary?: string | null): Promise<Story> {
-  const summary: string | null = precomputedSummary ?? null;
+export async function saveStoryFromTranscript(
+  session: InterviewSession,
+  transcript: string,
+  precomputedSummary?: string | null,
+  precomputedTitle?: string | null
+): Promise<Story> {
+  let summary = precomputedSummary;
+  let title = precomputedTitle || session.currentTopic || "Interview Segment";
+
+  // If summary was not precomputed, or is too short, or is identical to raw transcript:
+  if (!summary || summary.trim().length < 10 || summary.trim() === transcript.trim()) {
+    try {
+      const narrativeResult = await generateBiographicalNarrative(transcript, title);
+      summary = narrativeResult.summary;
+      if ((!precomputedTitle || title === "Interview Segment" || title.toLowerCase().includes("untitled")) && narrativeResult.title) {
+        title = narrativeResult.title;
+      }
+    } catch (err) {
+      console.warn("Failed to generate biographical narrative in saveStoryFromTranscript:", err);
+      const fallback = synthesizeBiographicalFallback(transcript, title);
+      summary = fallback.summary;
+      if (!precomputedTitle || title === "Interview Segment" || title.toLowerCase().includes("untitled")) {
+        title = fallback.title;
+      }
+    }
+  }
+
+  if (!title || title === "Interview Segment" || title.toLowerCase().includes("untitled")) {
+    const fallback = synthesizeBiographicalFallback(transcript, title);
+    if (fallback.title) title = fallback.title;
+  }
 
   const story = await createStory({
     session_id: session.id,
     transcript: transcript,
     summary: summary,
-    title: session.currentTopic || "Interview Segment",
+    title: title,
     era_tags: [],
   });
   

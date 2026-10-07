@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { getStories, getEntities, StoryWithDetails } from "@/lib/supabase/client";
 import { Entity } from "@/types/database";
+import { synthesizeBiographicalFallback } from "@/lib/gemini/summarize";
 import "./print.css";
 
 interface EraItem {
@@ -485,7 +486,9 @@ export default function BiographyPage() {
                             </span>
                           </div>
                           <p className="text-sm text-ink/80 font-serif leading-relaxed">
-                            {story.summary || (story.transcript.length > 180 ? story.transcript.slice(0, 180) + "…" : story.transcript)}
+                            {story.summary && story.summary.trim().length > 10 && story.summary !== story.transcript
+                              ? story.summary
+                              : synthesizeBiographicalFallback(story.transcript, story.title || undefined).summary}
                           </p>
                         </div>
                       ))}

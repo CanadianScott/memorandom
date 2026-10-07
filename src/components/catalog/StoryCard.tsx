@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
-import { User, MapPin, Clock, Sparkles, ChevronDown, ChevronUp, Trash2, AlertCircle } from "lucide-react";
+import React, { useState, useMemo } from "react";
+import { User, MapPin, Clock, Sparkles, ChevronDown, ChevronUp, Trash2, AlertCircle, Mic } from "lucide-react";
 import { StoryWithDetails } from "@/lib/supabase/client";
 import { Entity } from "@/types/database";
+import { synthesizeBiographicalFallback } from "@/lib/gemini/summarize";
 
 export interface StoryCardProps {
   story: StoryWithDetails;
@@ -63,8 +64,30 @@ export function StoryCard({
     day: "numeric",
   });
 
-  const title = story.title?.trim() || "Untitled Story";
-  const displayText = story.summary || story.transcript || "";
+  // Fallback to synthesized biographical narrative if summary is missing or equal to raw transcript
+  const fallbackNarrative = useMemo(() => {
+    return synthesizeBiographicalFallback(story.transcript, story.title || undefined);
+  }, [story.transcript, story.title]);
+
+  const title = useMemo(() => {
+    if (
+      story.title &&
+      story.title !== "Interview Segment" &&
+      story.title !== "Untitled Story" &&
+      story.title !== "Life Story Session"
+    ) {
+      return story.title;
+    }
+    return fallbackNarrative.title;
+  }, [story.title, fallbackNarrative.title]);
+
+  const displayText = useMemo(() => {
+    if (story.summary && story.summary.trim().length > 10 && story.summary !== story.transcript) {
+      return story.summary;
+    }
+    return fallbackNarrative.summary;
+  }, [story.summary, story.transcript, fallbackNarrative.summary]);
+
   const isLongText = displayText.length > 200;
 
   const renderTagChip = (entity: Entity) => {
@@ -199,6 +222,19 @@ export function StoryCard({
               </>
             )}
           </button>
+        )}
+
+        {/* Collapsible original spoken transcript for family reference */}
+        {isExpanded && story.transcript && story.transcript !== displayText && (
+          <details className="mt-4 pt-3 border-t border-warm-brown/10 text-xs text-ink/60">
+            <summary className="cursor-pointer hover:text-warm-brown font-medium inline-flex items-center gap-1.5 select-none">
+              <Mic className="w-3.5 h-3.5 text-warm-brown/70 shrink-0" />
+              <span>Original spoken recording transcript</span>
+            </summary>
+            <p className="mt-2.5 p-3 rounded-xl bg-warm-brown/5 border border-warm-brown/10 font-sans text-xs italic text-ink/70 leading-relaxed">
+              "{story.transcript}"
+            </p>
+          </details>
         )}
       </div>
 

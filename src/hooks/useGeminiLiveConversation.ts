@@ -202,7 +202,7 @@ ${initialPrompt ? `- Starting topic: "${initialPrompt}"` : ""}`;
       });
 
       const session = await ai.live.connect({
-        model: "gemini-3.1-flash-live-preview",
+        model: "gemini-3.8-live",
         config: {
           responseModalities: [Modality.AUDIO],
           systemInstruction: {
@@ -233,14 +233,14 @@ ${initialPrompt ? `- Starting topic: "${initialPrompt}"` : ""}`;
             }
 
             // Real-time user transcription
-            const userChunk =
-              serverContent.inputTranscription?.text ||
-              (serverContent as unknown as { interimInputTranscription?: { text?: string } })
-                ?.interimInputTranscription?.text;
-            if (userChunk) {
-              userTurnAccumulatorRef.current += userChunk;
+            if (serverContent.inputTranscription?.text) {
+              const text = serverContent.inputTranscription.text;
+              userTurnAccumulatorRef.current += text;
               setUserTranscript(userTurnAccumulatorRef.current);
               onUserSpeech?.(userTurnAccumulatorRef.current);
+            } else if ((serverContent as unknown as { interimInputTranscription?: { text?: string } })?.interimInputTranscription?.text) {
+              const interim = (serverContent as unknown as { interimInputTranscription?: { text?: string } }).interimInputTranscription!.text!;
+              setUserTranscript(userTurnAccumulatorRef.current ? `${userTurnAccumulatorRef.current} ${interim}` : interim);
             }
 
             // Real-time Gemini audio playback and transcription
@@ -298,11 +298,11 @@ ${initialPrompt ? `- Starting topic: "${initialPrompt}"` : ""}`;
               const finalUser = userTurnAccumulatorRef.current.trim();
               const finalGemini = geminiTurnAccumulatorRef.current.trim();
 
-              if (finalGemini) {
+              if (finalUser || finalGemini) {
                 setConversationTurns((prev) => [
                   ...prev,
                   ...(finalUser ? [{ role: "user" as const, text: finalUser, timestamp: new Date() }] : []),
-                  { role: "gemini" as const, text: finalGemini, timestamp: new Date() },
+                  ...(finalGemini ? [{ role: "gemini" as const, text: finalGemini, timestamp: new Date() }] : []),
                 ]);
               }
 

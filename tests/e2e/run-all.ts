@@ -21,6 +21,7 @@ import { runDeploymentTests } from "./deployment.test";
 import { runVisualStageTests } from "./visual-stage.test";
 import { runCrossFeatureTests } from "./cross-feature.test";
 import { runRealWorldTests } from "./real-world.test";
+import { runBiographicalNarrativeTests } from "./biographical-narrative.test";
 
 export async function runAllE2ETests() {
   const startTime = Date.now();
@@ -30,6 +31,9 @@ export async function runAllE2ETests() {
   globalTestContext.clear();
 
   try {
+    console.log("  → Running Biographical Narrative Synthesis tests...");
+    await runBiographicalNarrativeTests();
+
     console.log("  → Running R1 Story Catalog tests...");
     await runCatalogTests();
 

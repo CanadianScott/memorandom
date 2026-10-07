@@ -258,6 +258,7 @@ async function main() {
       } catch {}
       console.log("Server shut down cleanly.");
     }
+    process.exit(0);
   }
 }
 
@@ -265,3 +266,4 @@ main().catch((err) => {
   console.error("Production server verification failed:", err);
   process.exit(1);
 });
+

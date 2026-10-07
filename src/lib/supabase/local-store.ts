@@ -174,9 +174,44 @@ const SEED_STORIES: Story[] = [
     created_at: now,
     updated_at: now,
   },
+  {
+    id: "story-waterton-summers",
+    session_id: null,
+    title: "Summer Days in Waterton Lakes",
+    transcript:
+      "Every summer when I was growing up, our family would load up the station wagon and drive north from Idaho up to Waterton, Alberta. The way the prairie rolled straight into the sheer cliffs of the Rockies always took my breath away. We would camp by the lakeshore, hike the alpine trails, and watch for grizzly bears and elk across the water. Those summer weeks in Waterton were where I first fell in love with southern Alberta, and it stayed with me for the rest of my life.",
+    summary:
+      "During his youth in the 1960s, Blair Goates journeyed each summer with his family from Blackfoot north to Waterton Lakes, Alberta. Camped at the dramatic seam where the prairie grasslands meet the steep Rocky Mountain ramparts, he spent those formative weeks hiking alpine ridges and scanning the lake edges for wildlife. Those childhood summer expeditions instilled in him a deep, lasting connection to the southern Alberta wilderness that would ultimately draw him back to build his home in Lethbridge.",
+    gemini_interaction_id: null,
+    era_tags: ["Childhood in Blackfoot"],
+    created_at: now,
+    updated_at: now,
+  },
 ];
-const SEED_CHAPTERS: Chapter[] = [];
-const SEED_CHAPTER_STORIES: { chapter_id: string; story_id: string; display_order: number }[] = [];
+const SEED_CHAPTERS: Chapter[] = [
+  {
+    id: "chapter-seed-1",
+    title: "Formative Years in Idaho and Waterton",
+    summary: "Memories of growing up in Blackfoot, family summers at Waterton Lakes, and youth in the late 1950s and 1960s.",
+    cover_media_id: null,
+    display_order: 1,
+    created_at: now,
+    updated_at: now,
+  },
+  {
+    id: "chapter-seed-2",
+    title: "Life, Family & Aviation in Southern Alberta",
+    summary: "Marriage to Robin, raising Melissa, Scott, and Jessica in Lethbridge, and soaring over the coulees.",
+    cover_media_id: null,
+    display_order: 2,
+    created_at: now,
+    updated_at: now,
+  },
+];
+const SEED_CHAPTER_STORIES: { chapter_id: string; story_id: string; display_order: number }[] = [
+  { chapter_id: "chapter-seed-1", story_id: "story-bio-overview", display_order: 1 },
+  { chapter_id: "chapter-seed-1", story_id: "story-waterton-summers", display_order: 2 },
+];
 const SEED_STORY_ENTITIES: StoryEntity[] = [
   { story_id: "story-bio-overview", entity_id: "entity-blair", confidence: 1.0 },
   { story_id: "story-bio-overview", entity_id: "entity-robin", confidence: 1.0 },
@@ -191,6 +226,9 @@ const SEED_STORY_ENTITIES: StoryEntity[] = [
   { story_id: "story-bio-overview", entity_id: "entity-era-career", confidence: 1.0 },
   { story_id: "story-bio-overview", entity_id: "entity-event-marriage", confidence: 1.0 },
   { story_id: "story-bio-overview", entity_id: "entity-event-plane", confidence: 1.0 },
+  { story_id: "story-waterton-summers", entity_id: "entity-blair", confidence: 1.0 },
+  { story_id: "story-waterton-summers", entity_id: "entity-waterton", confidence: 1.0 },
+  { story_id: "story-waterton-summers", entity_id: "entity-era-childhood", confidence: 1.0 },
 ];
 
 const SEED_SUGGESTED_PROMPTS: SuggestedPrompt[] = [
@@ -227,8 +265,8 @@ const memoryStore: Record<string, unknown[]> = {
   [STORAGE_KEYS.STORIES]: [...SEED_STORIES],
   [STORAGE_KEYS.STORY_ENTITIES]: [...SEED_STORY_ENTITIES],
   [STORAGE_KEYS.MEDIA]: [],
-  [STORAGE_KEYS.CHAPTERS]: [],
-  [STORAGE_KEYS.CHAPTER_STORIES]: [],
+  [STORAGE_KEYS.CHAPTERS]: [...SEED_CHAPTERS],
+  [STORAGE_KEYS.CHAPTER_STORIES]: [...SEED_CHAPTER_STORIES],
   [STORAGE_KEYS.SUGGESTED_PROMPTS]: [...SEED_SUGGESTED_PROMPTS],
 };
 
@@ -348,7 +386,6 @@ export function localEndSession(id: string): Session {
   };
 }
 
-// Story operations
 export function localCreateStory(storyData: StoryInsert): Story {
   const stories = getArray<Story>(STORAGE_KEYS.STORIES, SEED_STORIES);
   const currentTime = new Date().toISOString();

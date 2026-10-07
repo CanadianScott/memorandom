@@ -4,7 +4,8 @@ import React from "react";
 import { StoryWithDetails } from "@/lib/supabase/client";
 import { ImageCarousel } from "@/components/visual-stage/ImageCarousel";
 import { Button } from "@/components/ui/Button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Mic } from "lucide-react";
+import { synthesizeBiographicalFallback } from "@/lib/gemini/summarize";
 
 export interface StoryReaderProps {
   story: StoryWithDetails;
@@ -21,8 +22,21 @@ export function StoryReader({
   hasNext,
   hasPrevious,
 }: StoryReaderProps) {
+  // Derive biographical narrative and fallback if needed
+  const fallback = React.useMemo(() => {
+    return synthesizeBiographicalFallback(story.transcript, story.title || undefined);
+  }, [story.transcript, story.title]);
+
+  const displayTitle = story.title && story.title !== "Interview Segment" && story.title !== "Untitled Story"
+    ? story.title
+    : fallback.title;
+
+  const narrativeText = story.summary && story.summary.trim().length > 10 && story.summary !== story.transcript
+    ? story.summary
+    : fallback.summary;
+
   // Format narrative text
-  const paragraphs = story.transcript.split("\n\n").filter((p) => p.trim() !== "");
+  const paragraphs = narrativeText.split("\n\n").filter((p) => p.trim() !== "");
 
   // Hero image
   const heroMedia = story.story_media && story.story_media.length > 0 
@@ -74,7 +88,7 @@ export function StoryReader({
           </div>
         )}
         <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-ink leading-tight mb-4">
-          {story.title || "Untitled Story"}
+          {displayTitle || story.title || "Untitled Story"}
         </h1>
         <time className="text-warm-brown/70 italic text-lg">{formattedDate}</time>
       </header>
@@ -128,9 +142,24 @@ export function StoryReader({
         </div>
       )}
 
+      {/* Spoken Recording Transcript Accordion (Optional family reference) */}
+      {story.transcript && story.transcript !== narrativeText && (
+        <div className="mt-12 pt-6 border-t border-warm-brown/20 print:hidden">
+          <details className="text-sm text-ink/70">
+            <summary className="cursor-pointer hover:text-warm-brown font-serif font-medium inline-flex items-center gap-2 select-none">
+              <Mic className="w-4 h-4 text-warm-brown/70 shrink-0" />
+              <span>Original Spoken Recording Transcript</span>
+            </summary>
+            <div className="mt-3 p-4 rounded-2xl bg-white/70 border border-warm-brown/15 font-sans text-sm italic text-ink/75 leading-relaxed shadow-2xs">
+              "{story.transcript}"
+            </div>
+          </details>
+        </div>
+      )}
+
       {/* Entity Mentions */}
       {story.story_entities && story.story_entities.length > 0 && (
-        <div className="mt-16 pt-8 border-t border-warm-brown/20 print:hidden">
+        <div className="mt-12 pt-8 border-t border-warm-brown/20 print:hidden">
           <h4 className="text-sm uppercase tracking-widest text-warm-brown/70 mb-4">People & Places Mentioned</h4>
           <div className="flex flex-wrap gap-2">
             {story.story_entities.map((se) => (
