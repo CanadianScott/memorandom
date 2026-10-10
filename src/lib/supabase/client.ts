@@ -71,7 +71,7 @@ export function createBrowserClient(): SupabaseClient<Database> {
 export const supabase = createBrowserClient();
 
 export async function getEntities(type?: EntityType, userId = "blair"): Promise<Entity[]> {
-  if (!isSupabaseConfigured) {
+  if (!isSupabaseConfigured || userId === "scott") {
     return localGetEntities(type, userId);
   }
   try {
@@ -89,7 +89,7 @@ export async function getEntities(type?: EntityType, userId = "blair"): Promise<
 }
 
 export async function upsertEntity(entity: EntityInsert, userId = "blair"): Promise<Entity> {
-  if (!isSupabaseConfigured) {
+  if (!isSupabaseConfigured || userId === "scott") {
     return localUpsertEntity(entity, userId);
   }
   try {
@@ -117,20 +117,28 @@ export async function createStory(storyData: StoryInsert, userId = "blair"): Pro
     }
   }
 
+  const taggedPayload = {
+    ...sanitized,
+    gemini_interaction_id: userId === "scott" ? "user:scott" : (sanitized.gemini_interaction_id || null),
+    era_tags: userId === "scott"
+      ? Array.from(new Set([...(sanitized.era_tags || []), "user:scott"]))
+      : (sanitized.era_tags || []),
+  };
+
   if (!isSupabaseConfigured) {
-    return localCreateStory(sanitized, userId);
+    return localCreateStory(taggedPayload, userId);
   }
   try {
     const { data: story, error } = await supabase
       .from("stories")
-      .insert(sanitized as never)
+      .insert(taggedPayload as never)
       .select()
       .single();
     if (error) throw error;
     return story as Story;
   } catch (err) {
     console.warn("Supabase createStory failed, falling back to local story:", err);
-    return localCreateStory(sanitized, userId);
+    return localCreateStory(taggedPayload, userId);
   }
 }
 
@@ -247,7 +255,28 @@ export async function getStories(
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data as unknown as StoryWithDetails[]) ?? [];
+    const allStories = (data as unknown as StoryWithDetails[]) ?? [];
+
+    if (userId === "scott") {
+      const scottStories = allStories.filter(
+        (s) =>
+          s.gemini_interaction_id === "user:scott" ||
+          s.era_tags?.includes("user:scott")
+      );
+      const localScott = getLocalStoriesWithDetails(options, "scott");
+      for (const ls of localScott) {
+        if (!scottStories.some((cs) => cs.id === ls.id)) {
+          scottStories.push(ls);
+        }
+      }
+      return scottStories;
+    } else {
+      return allStories.filter(
+        (s) =>
+          s.gemini_interaction_id !== "user:scott" &&
+          !s.era_tags?.includes("user:scott")
+      );
+    }
   } catch (err) {
     console.warn("Supabase getStories failed, using local stories:", err);
     return getLocalStoriesWithDetails(options, userId);
@@ -444,7 +473,7 @@ export type ChapterWithStories = Chapter & {
 };
 
 export async function getChaptersWithStories(userId = "blair"): Promise<ChapterWithStories[]> {
-  if (!isSupabaseConfigured) {
+  if (!isSupabaseConfigured || userId === "scott") {
     return getLocalChaptersWithStories(userId);
   }
   try {
@@ -540,7 +569,7 @@ export async function endSession(id: string, userId = "blair"): Promise<Session>
 }
 
 export async function getSuggestedPrompts(userId = "blair"): Promise<SuggestedPrompt[]> {
-  if (!isSupabaseConfigured) {
+  if (!isSupabaseConfigured || userId === "scott") {
     return localGetSuggestedPrompts(userId);
   }
   try {
