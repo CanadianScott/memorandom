@@ -22,6 +22,10 @@ export function HomePageClient() {
   // Reload data whenever the active user changes
   useEffect(() => {
     let isMounted = true;
+    setStories([]);
+    setEntities([]);
+    setPrompts([]);
+
     async function loadData() {
       const [s, e, p] = await Promise.all([
         getStories(undefined, userId).catch(() => [] as StoryWithDetails[]),

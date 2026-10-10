@@ -1,7 +1,7 @@
 export type UserId = 'blair' | 'scott';
 
 export const USERS: Record<UserId, { id: UserId; displayName: string; label: string }> = {
-  blair: { id: 'blair', displayName: 'Blair', label: "Dad (Blair)" },
+  blair: { id: 'blair', displayName: 'Blair', label: 'Blair' },
   scott: { id: 'scott', displayName: 'Scott', label: 'Scott' },
 };
 

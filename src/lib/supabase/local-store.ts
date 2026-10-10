@@ -463,21 +463,7 @@ const SCOTT_SEED_ENTITIES: Entity[] = [
   },
 ];
 
-const SCOTT_SEED_STORIES: Story[] = [
-  {
-    id: "scott-story-bio-overview",
-    session_id: null,
-    title: "A Life from Lethbridge to California",
-    transcript:
-      "Scott Goates was born in 1981 in Lethbridge, Alberta, where he grew up and attended LCI high school, graduating in 1999. He went on to study at Brigham Young University in Provo, Utah, though he paused his studies from May 2000 to May 2002 to serve an LDS mission in France — an experience that shaped much of who he became. Back at BYU, he met Andrea Wells, and on August 13, 2005, they married in Seattle, Washington. In 2006, Scott began his PhD at Washington State University in Pullman, completing it in August 2010. He then joined the CDC, building a career in public health research. Scott and Andrea have four children — Elaine, Joyce, James, and Eloise — and the family currently lives in Santa Clarita, California.",
-    summary:
-      "Scott Goates was born in 1981 in Lethbridge, Alberta, attending LCI before studying at BYU. From 2000–2002 he served an LDS mission in France. He married Andrea Wells on August 13, 2005 in Seattle, completed a PhD at Washington State University (2006–2010), and joined the CDC after graduation. Scott and Andrea have four children — Elaine, Joyce, James, and Eloise — and make their home in Santa Clarita, California.",
-    gemini_interaction_id: null,
-    era_tags: ["Childhood in Lethbridge", "BYU & Mission Years", "PhD at Washington State", "Career & Family in California"],
-    created_at: now,
-    updated_at: now,
-  },
-];
+const SCOTT_SEED_STORIES: Story[] = [];
 
 const SCOTT_SEED_CHAPTERS: Chapter[] = [
   {
@@ -500,29 +486,9 @@ const SCOTT_SEED_CHAPTERS: Chapter[] = [
   },
 ];
 
-const SCOTT_SEED_CHAPTER_STORIES: { chapter_id: string; story_id: string; display_order: number }[] = [
-  { chapter_id: "scott-chapter-seed-1", story_id: "scott-story-bio-overview", display_order: 1 },
-];
+const SCOTT_SEED_CHAPTER_STORIES: { chapter_id: string; story_id: string; display_order: number }[] = [];
 
-const SCOTT_SEED_STORY_ENTITIES: StoryEntity[] = [
-  { story_id: "scott-story-bio-overview", entity_id: "se-scott",        confidence: 1.0 },
-  { story_id: "scott-story-bio-overview", entity_id: "se-andrea",       confidence: 1.0 },
-  { story_id: "scott-story-bio-overview", entity_id: "se-lethbridge",   confidence: 1.0 },
-  { story_id: "scott-story-bio-overview", entity_id: "se-lci",          confidence: 1.0 },
-  { story_id: "scott-story-bio-overview", entity_id: "se-byu",          confidence: 1.0 },
-  { story_id: "scott-story-bio-overview", entity_id: "se-france",       confidence: 1.0 },
-  { story_id: "scott-story-bio-overview", entity_id: "se-seattle",      confidence: 1.0 },
-  { story_id: "scott-story-bio-overview", entity_id: "se-wsu",          confidence: 1.0 },
-  { story_id: "scott-story-bio-overview", entity_id: "se-cdc",          confidence: 1.0 },
-  { story_id: "scott-story-bio-overview", entity_id: "se-sc",           confidence: 1.0 },
-  { story_id: "scott-story-bio-overview", entity_id: "se-era-childhood", confidence: 1.0 },
-  { story_id: "scott-story-bio-overview", entity_id: "se-era-byu",      confidence: 1.0 },
-  { story_id: "scott-story-bio-overview", entity_id: "se-era-phd",      confidence: 1.0 },
-  { story_id: "scott-story-bio-overview", entity_id: "se-era-career",   confidence: 1.0 },
-  { story_id: "scott-story-bio-overview", entity_id: "se-event-mission", confidence: 1.0 },
-  { story_id: "scott-story-bio-overview", entity_id: "se-event-wedding", confidence: 1.0 },
-  { story_id: "scott-story-bio-overview", entity_id: "se-event-phd",    confidence: 1.0 },
-];
+const SCOTT_SEED_STORY_ENTITIES: StoryEntity[] = [];
 
 const SCOTT_SEED_SUGGESTED_PROMPTS: SuggestedPrompt[] = [
   {
@@ -714,7 +680,11 @@ export function localEndSession(id: string, userId = "blair"): Session {
 
 export function localGetStories(userId = "blair"): Story[] {
   const seed = getSeed(userId);
-  return getArray<Story>(KEY.STORIES, userId, seed.stories);
+  const stories = getArray<Story>(KEY.STORIES, userId, seed.stories);
+  if (userId === "scott") {
+    return stories.filter((s) => s.id !== "scott-story-bio-overview");
+  }
+  return stories;
 }
 
 export function localCreateStory(storyData: StoryInsert, userId = "blair"): Story {
@@ -795,7 +765,10 @@ export function localLinkStoryEntities(storyId: string, entityIds: string[], use
 
 export function localGetStoryEntities(storyId?: string, userId = "blair"): StoryEntity[] {
   const seed = getSeed(userId);
-  const all = getArray<StoryEntity>(KEY.STORY_ENTITIES, userId, seed.storyEntities);
+  let all = getArray<StoryEntity>(KEY.STORY_ENTITIES, userId, seed.storyEntities);
+  if (userId === "scott") {
+    all = all.filter((se) => se.story_id !== "scott-story-bio-overview");
+  }
   if (storyId) {
     return all.filter((se) => se.story_id === storyId);
   }
@@ -881,11 +854,15 @@ export function localGetChapters(userId = "blair"): Chapter[] {
 
 export function localGetChapterStories(userId = "blair"): { chapter_id: string; story_id: string; display_order: number }[] {
   const seed = getSeed(userId);
-  return getArray<{ chapter_id: string; story_id: string; display_order: number }>(
+  const cs = getArray<{ chapter_id: string; story_id: string; display_order: number }>(
     KEY.CHAPTER_STORIES,
     userId,
     seed.chapterStories
   );
+  if (userId === "scott") {
+    return cs.filter((item) => item.story_id !== "scott-story-bio-overview");
+  }
+  return cs;
 }
 
 export function localCreateChapter(title: string, storyIds: string[], coverMediaId?: string, userId = "blair"): Chapter {

@@ -6,7 +6,7 @@ import { MessageSquarePlus, Mic, Trash2, AlertCircle, HeartHandshake, Tag, Plus,
 import { SuggestedPrompt } from "@/types/database";
 import { getSuggestedPrompts, createSuggestedPrompt, updateSuggestedPrompt, deleteSuggestedPrompt } from "@/lib/supabase/client";
 
-const SUGGESTION_CATEGORIES = [
+const BLAIR_CATEGORIES = [
   "Adventures & Flying",
   "Waterton & Outdoors",
   "Childhood in Idaho",
@@ -15,7 +15,17 @@ const SUGGESTION_CATEGORIES = [
   "Life Wisdom",
 ];
 
-const FAMILY_MEMBERS = ["Melissa", "Jessica", "Scott", "Robin"];
+const SCOTT_CATEGORIES = [
+  "Childhood in Lethbridge",
+  "BYU & Mission Years",
+  "PhD at Washington State",
+  "Career & Public Health",
+  "Family & Marriage",
+  "Life Wisdom",
+];
+
+const BLAIR_FAMILY = ["Melissa", "Jessica", "Scott", "Robin"];
+const SCOTT_FAMILY = ["Andrea", "Elaine", "Joyce", "James", "Eloise"];
 
 export interface PromptSuggestionsProps {
   initialPrompts?: SuggestedPrompt[];
@@ -23,6 +33,10 @@ export interface PromptSuggestionsProps {
 }
 
 export function PromptSuggestions({ initialPrompts = [], userId = "blair" }: PromptSuggestionsProps) {
+  const targetName = userId === "scott" ? "Scott" : "Blair";
+  const suggestionCategories = userId === "scott" ? SCOTT_CATEGORIES : BLAIR_CATEGORIES;
+  const familyMembers = userId === "scott" ? SCOTT_FAMILY : BLAIR_FAMILY;
+
   const [prompts, setPrompts] = useState<SuggestedPrompt[]>(initialPrompts);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [promptText, setPromptText] = useState("");
@@ -32,6 +46,11 @@ export function PromptSuggestions({ initialPrompts = [], userId = "blair" }: Pro
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Sync when initialPrompts prop updates (e.g. user toggle)
+  useEffect(() => {
+    setPrompts(initialPrompts);
+  }, [initialPrompts]);
 
   // Sync client-side with localStorage or Supabase on mount
   useEffect(() => {
@@ -119,16 +138,16 @@ export function PromptSuggestions({ initialPrompts = [], userId = "blair" }: Pro
                   id="suggested-prompts-heading"
                   className="text-2xl md:text-3xl font-serif font-bold text-warm-brown tracking-tight"
                 >
-                  Prompts for {userId === "blair" ? "Dad" : "Scott"}
+                  Prompts for {targetName}
                 </h2>
                 <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-warm-brown/15 text-warm-brown">
                   {prompts.length} {prompts.length === 1 ? "suggestion" : "suggestions"}
                 </span>
               </div>
               <p className="text-sm text-ink/75 font-sans mt-1">
-                {userId === "blair"
-                  ? "Have a story you want Dad to tell? Melissa, Jessica, Scott, or anyone with the link can suggest a memory or question for his next recording."
-                  : "Have a memory you want Scott to share? Andrea, Elaine, Joyce, James, Eloise, or anyone with the link can suggest a story for his next recording."}
+                {userId === "scott"
+                  ? "Have a memory you want Scott to share? Andrea, Elaine, Joyce, James, Eloise, or anyone with the link can suggest a story for his next recording."
+                  : "Have a story you want Blair to tell? Melissa, Jessica, Scott, Robin, or anyone with the link can suggest a memory or question for his next recording."}
               </p>
             </div>
           </div>
@@ -158,7 +177,7 @@ export function PromptSuggestions({ initialPrompts = [], userId = "blair" }: Pro
             className="mb-8 p-5 md:p-6 rounded-2xl bg-white/80 border border-warm-brown/20 shadow-2xs animate-fadeIn space-y-4"
           >
             <h3 className="font-serif font-bold text-lg text-ink">
-              Leave a Story Prompt for Dad
+              Leave a Story Prompt for {targetName}
             </h3>
 
             <div>
@@ -171,7 +190,11 @@ export function PromptSuggestions({ initialPrompts = [], userId = "blair" }: Pro
                 required
                 value={promptText}
                 onChange={(e) => setPromptText(e.target.value)}
-                placeholder="e.g., Dad, tell us about the day you flew your plane through the mountains to Waterton..."
+                placeholder={
+                  userId === "scott"
+                    ? "e.g., Scott, tell us about what it was like living in France on your mission..."
+                    : "e.g., Blair, tell us about the day you flew your plane through the mountains to Waterton..."
+                }
                 className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-warm-brown/25 bg-cream/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-warm-brown/40 text-ink placeholder:text-ink/40"
               />
             </div>
@@ -183,7 +206,7 @@ export function PromptSuggestions({ initialPrompts = [], userId = "blair" }: Pro
                 </label>
                 <div className="flex flex-wrap items-center gap-1.5 mb-2">
                   <span className="text-[11px] text-ink/60 font-medium">Quick pick:</span>
-                  {FAMILY_MEMBERS.map((name) => (
+                  {familyMembers.map((name) => (
                     <button
                       key={name}
                       type="button"
@@ -203,7 +226,11 @@ export function PromptSuggestions({ initialPrompts = [], userId = "blair" }: Pro
                   type="text"
                   value={suggestedBy}
                   onChange={(e) => setSuggestedBy(e.target.value)}
-                  placeholder="e.g., Melissa, Jessica, Scott, or custom name..."
+                  placeholder={
+                    userId === "scott"
+                      ? "e.g., Andrea, Elaine, Joyce, James, Eloise..."
+                      : "e.g., Melissa, Jessica, Scott, Robin..."
+                  }
                   className="w-full px-3.5 py-2 text-sm rounded-xl border border-warm-brown/25 bg-cream/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-warm-brown/40 text-ink placeholder:text-ink/40"
                 />
               </div>
@@ -213,7 +240,7 @@ export function PromptSuggestions({ initialPrompts = [], userId = "blair" }: Pro
                   Category Tag (optional)
                 </label>
                 <div className="flex flex-wrap gap-1.5">
-                  {SUGGESTION_CATEGORIES.map((cat) => (
+                  {suggestionCategories.map((cat) => (
                     <button
                       key={cat}
                       type="button"
@@ -244,7 +271,7 @@ export function PromptSuggestions({ initialPrompts = [], userId = "blair" }: Pro
                 disabled={isSubmitting || promptText.trim().length < 3}
                 className="px-5 py-2 text-xs font-semibold rounded-xl bg-warm-brown text-white hover:bg-warm-brown/90 transition-all shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
               >
-                {isSubmitting ? "Saving..." : "Add Prompt for Dad"}
+                {isSubmitting ? "Saving..." : `Add Prompt for ${targetName}`}
               </button>
             </div>
           </form>
@@ -254,7 +281,7 @@ export function PromptSuggestions({ initialPrompts = [], userId = "blair" }: Pro
         {submitSuccess && (
           <div className="mb-6 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-800 flex items-center gap-2 animate-fadeIn">
             <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>Prompt added! Dad or anyone interviewing him can now record this memory.</span>
+            <span>Prompt added! {targetName} or anyone interviewing him can now record this memory.</span>
           </div>
         )}
 
@@ -269,7 +296,7 @@ export function PromptSuggestions({ initialPrompts = [], userId = "blair" }: Pro
               onClick={() => setIsFormOpen(true)}
               className="text-xs font-semibold text-warm-brown hover:underline cursor-pointer"
             >
-              Be the first to suggest a memory for Dad
+              Be the first to suggest a memory for {targetName}
             </button>
           </div>
         ) : (
@@ -351,7 +378,7 @@ export function PromptSuggestions({ initialPrompts = [], userId = "blair" }: Pro
                     </p>
                   </div>
 
-                  {/* Action: Interview Dad with this Prompt */}
+                  {/* Action: Interview target user with this Prompt */}
                   <div className="pt-3 border-t border-warm-brown/10 flex items-center justify-between gap-2">
                     <button
                       type="button"
@@ -366,19 +393,19 @@ export function PromptSuggestions({ initialPrompts = [], userId = "blair" }: Pro
                       {p.status === "used" ? (
                         <>
                           <CheckCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                          <span>Recorded for Dad</span>
+                          <span>Recorded for {targetName}</span>
                         </>
                       ) : (
-                        <span>Ready for Dad</span>
+                        <span>Ready for {targetName}</span>
                       )}
                     </button>
                     <Link
                       href={`/interview?prompt=${encodeURIComponent(p.prompt)}`}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-warm-brown text-white text-xs font-semibold hover:bg-warm-brown/90 shadow-2xs transition-all cursor-pointer shrink-0"
-                      title="Start interview with Dad using this prompt"
+                      title={`Start interview with ${targetName} using this prompt`}
                     >
                       <Mic className="w-3.5 h-3.5" />
-                      Ask Dad This
+                      Ask {targetName} This
                     </Link>
                   </div>
                 </div>

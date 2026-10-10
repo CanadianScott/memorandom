@@ -67,6 +67,10 @@ export function StoryCatalog({
     setEntities(initialEntities);
   }, [initialEntities]);
 
+  useEffect(() => {
+    setSelectedEntity(null);
+  }, [userId]);
+
   // Synchronize client-side with local storage / Supabase on mount or user switch
   useEffect(() => {
     let isMounted = true;

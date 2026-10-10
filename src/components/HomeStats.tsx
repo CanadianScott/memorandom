@@ -20,6 +20,18 @@ export function HomeStats({
   const [peopleCount, setPeopleCount] = useState<number>(initialPeopleCount);
   const [placesCount, setPlacesCount] = useState<number>(initialPlacesCount);
 
+  useEffect(() => {
+    setStoriesCount(initialStoriesCount);
+  }, [initialStoriesCount]);
+
+  useEffect(() => {
+    setPeopleCount(initialPeopleCount);
+  }, [initialPeopleCount]);
+
+  useEffect(() => {
+    setPlacesCount(initialPlacesCount);
+  }, [initialPlacesCount]);
+
   // Synchronize on mount and subscribe to story changes
   useEffect(() => {
     let isMounted = true;
@@ -31,7 +43,7 @@ export function HomeStats({
           if (Array.isArray(stories)) {
             setStoriesCount(stories.length);
           }
-          if (Array.isArray(entities) && entities.length > 0) {
+          if (Array.isArray(entities)) {
             setPeopleCount(entities.filter((e) => e.type === "person").length);
             setPlacesCount(entities.filter((e) => e.type === "place").length);
           }
@@ -64,7 +76,7 @@ export function HomeStats({
       window.removeEventListener("memorandom:story-created", handleStoryCreated);
       window.removeEventListener("storage", syncStats);
     };
-  }, []);
+  }, [userId]);
 
   return (
     <div className="flex justify-center gap-8 md:gap-16 mb-16 px-4">

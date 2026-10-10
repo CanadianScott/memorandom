@@ -62,21 +62,16 @@ export async function runMultiUserTests() {
         expect(blairNames).not.toContain("Andrea Wells");
       });
 
-      await test("USER.02", "Blair and Scott have distinct seed stories", async () => {
+      await test("USER.02", "Scott starts with 0 stories until added, Blair has his initial stories", async () => {
         const blairStories = await getStories(undefined, "blair");
         const scottStories = await getStories(undefined, "scott");
 
         expect(blairStories.length).toBe(2);
-        expect(scottStories.length).toBe(1);
+        expect(scottStories.length).toBe(0);
 
         const blairTitles = blairStories.map((s) => s.title);
-        const scottTitles = scottStories.map((s) => s.title);
-
         expect(blairTitles).toContain("A Life Between Idaho and Alberta");
         expect(blairTitles).toContain("Summer Days in Waterton Lakes");
-        expect(scottTitles).toContain("A Life from Lethbridge to California");
-
-        expect(blairTitles).not.toContain("A Life from Lethbridge to California");
       });
 
       // ----------------------------------------------------
@@ -210,21 +205,20 @@ export async function runMultiUserTests() {
       // ----------------------------------------------------
       // 6. API Route User Filtering
       // ----------------------------------------------------
-      await test("USER.08", "GET /api/stories?userId=scott returns Scott's stories", async () => {
+      await test("USER.08", "GET /api/stories?userId=scott returns Scott's stories (0 initially, Blair has 2)", async () => {
         const scottReq = new NextRequest("http://localhost:3000/api/stories?userId=scott");
         const scottRes = await getStoriesRoute(scottReq);
         const scottData = await scottRes.json();
 
         expect(scottRes.status).toBe(200);
-        expect(scottData.stories.length).toBeGreaterThan(0);
-        expect(scottData.stories[0].title).toBe("A Life from Lethbridge to California");
+        expect(scottData.stories.length).toBe(0);
 
         const blairReq = new NextRequest("http://localhost:3000/api/stories?userId=blair");
         const blairRes = await getStoriesRoute(blairReq);
         const blairData = await blairRes.json();
 
         expect(blairRes.status).toBe(200);
-        expect(blairData.stories.length).toBeGreaterThan(0);
+        expect(blairData.stories.length).toBe(2);
         expect(blairData.stories.some((s: any) => s.title === "A Life Between Idaho and Alberta")).toBe(true);
       });
     }
