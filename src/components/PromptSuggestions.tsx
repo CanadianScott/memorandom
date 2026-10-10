@@ -19,9 +19,10 @@ const FAMILY_MEMBERS = ["Melissa", "Jessica", "Scott", "Robin"];
 
 export interface PromptSuggestionsProps {
   initialPrompts?: SuggestedPrompt[];
+  userId?: string;
 }
 
-export function PromptSuggestions({ initialPrompts = [] }: PromptSuggestionsProps) {
+export function PromptSuggestions({ initialPrompts = [], userId = "blair" }: PromptSuggestionsProps) {
   const [prompts, setPrompts] = useState<SuggestedPrompt[]>(initialPrompts);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [promptText, setPromptText] = useState("");
@@ -37,7 +38,7 @@ export function PromptSuggestions({ initialPrompts = [] }: PromptSuggestionsProp
     let isMounted = true;
     async function fetchPrompts() {
       try {
-        const fresh = await getSuggestedPrompts();
+        const fresh = await getSuggestedPrompts(userId);
         if (isMounted && Array.isArray(fresh)) {
           setPrompts(fresh);
         }
@@ -49,7 +50,7 @@ export function PromptSuggestions({ initialPrompts = [] }: PromptSuggestionsProp
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [userId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +64,7 @@ export function PromptSuggestions({ initialPrompts = [] }: PromptSuggestionsProp
         suggested_by: suggestedBy.trim() || "Family Member",
         category: selectedCategory || null,
         status: "pending",
-      });
+      }, userId);
 
       setPrompts((prev) => [newPrompt, ...prev.filter((p) => p.id !== newPrompt.id)]);
       setPromptText("");
@@ -81,7 +82,7 @@ export function PromptSuggestions({ initialPrompts = [] }: PromptSuggestionsProp
   const handleDelete = async (id: string) => {
     try {
       setDeletingId(id);
-      await deleteSuggestedPrompt(id);
+      await deleteSuggestedPrompt(id, userId);
       setPrompts((prev) => prev.filter((p) => p.id !== id));
       setConfirmDeleteId(null);
     } catch (err) {
@@ -94,7 +95,7 @@ export function PromptSuggestions({ initialPrompts = [] }: PromptSuggestionsProp
   const handleToggleStatus = async (id: string, currentStatus: "pending" | "used") => {
     try {
       const nextStatus = currentStatus === "pending" ? "used" : "pending";
-      await updateSuggestedPrompt(id, { status: nextStatus });
+      await updateSuggestedPrompt(id, { status: nextStatus }, userId);
       setPrompts((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: nextStatus } : p))
       );
@@ -118,14 +119,16 @@ export function PromptSuggestions({ initialPrompts = [] }: PromptSuggestionsProp
                   id="suggested-prompts-heading"
                   className="text-2xl md:text-3xl font-serif font-bold text-warm-brown tracking-tight"
                 >
-                  Prompts for Dad
+                  Prompts for {userId === "blair" ? "Dad" : "Scott"}
                 </h2>
                 <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-warm-brown/15 text-warm-brown">
                   {prompts.length} {prompts.length === 1 ? "suggestion" : "suggestions"}
                 </span>
               </div>
               <p className="text-sm text-ink/75 font-sans mt-1">
-                Have a story you want Dad to tell? Melissa, Jessica, Scott, or anyone with the link can suggest a memory or question for his next recording.
+                {userId === "blair"
+                  ? "Have a story you want Dad to tell? Melissa, Jessica, Scott, or anyone with the link can suggest a memory or question for his next recording."
+                  : "Have a memory you want Scott to share? Andrea, Elaine, Joyce, James, Eloise, or anyone with the link can suggest a story for his next recording."}
               </p>
             </div>
           </div>

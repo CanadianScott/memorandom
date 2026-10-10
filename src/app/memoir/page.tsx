@@ -9,9 +9,12 @@ import { MemoirCover } from "@/components/memoir/MemoirCover";
 import { Button } from "@/components/ui/Button";
 import { Printer } from "lucide-react";
 import Link from "next/link";
+import { useUser } from "@/lib/user/context";
+import { UserSwitcher } from "@/components/UserSwitcher";
 import "./print.css";
 
 export default function MemoirPage() {
+  const { userId } = useUser();
   const [chapters, setChapters] = useState<ChapterWithStories[]>([]);
   const [storyDetails, setStoryDetails] = useState<Record<string, StoryWithDetails>>({});
   const [entityCount, setEntityCount] = useState(0);
@@ -23,15 +26,16 @@ export default function MemoirPage() {
   useEffect(() => {
     async function loadMemoir() {
       try {
-        let chaps = await getChaptersWithStories();
-        const allStories = await getStories();
+        setLoading(true);
+        let chaps = await getChaptersWithStories(userId);
+        const allStories = await getStories(undefined, userId);
         
         if (chaps.length === 0 && allStories.length > 0) {
           const organized = await autoOrganizeChapters(allStories);
           for (const org of organized) {
-            await createChapter(org.title, org.storyIds);
+            await createChapter(org.title, org.storyIds, undefined, userId);
           }
-          chaps = await getChaptersWithStories();
+          chaps = await getChaptersWithStories(userId);
         }
         
         setChapters(chaps);
@@ -45,7 +49,7 @@ export default function MemoirPage() {
         });
         setStoryDetails(detailsMap);
         
-        const entities = await getEntities();
+        const entities = await getEntities(undefined, userId);
         setEntityCount(entities.length);
       } catch (error) {
         console.error("Failed to load memoir:", error);
@@ -55,7 +59,7 @@ export default function MemoirPage() {
     }
     
     loadMemoir();
-  }, []);
+  }, [userId]);
 
   const totalStories = chapters.reduce((acc, chap) => acc + chap.chapter_stories.length, 0);
 
@@ -102,7 +106,8 @@ export default function MemoirPage() {
       />
       
       <main ref={contentRef} className="flex-1 overflow-y-auto print:overflow-visible relative h-screen md:h-auto">
-        <div className="fixed md:absolute top-4 right-4 z-50 print:hidden flex gap-3">
+        <div className="fixed md:absolute top-4 right-4 z-50 print:hidden flex items-center gap-3">
+          <UserSwitcher />
           <Link href="/">
             <Button variant="outline" size="sm" className="gap-2 shadow-md bg-cream text-ink border border-warm-brown/20 hover:bg-aged-paper">
               Back to Home

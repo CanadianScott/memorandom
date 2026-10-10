@@ -2,7 +2,7 @@ import { getEntities, upsertEntity } from "../supabase/client";
 import { ExtractedEntity } from "@/types/entities";
 import { Entity, SessionMode, EntityType } from "@/types/database";
 
-export async function upsertExtractedEntities(entities: ExtractedEntity[]): Promise<Entity[]> {
+export async function upsertExtractedEntities(entities: ExtractedEntity[], userId = "blair"): Promise<Entity[]> {
   const results: Entity[] = [];
   for (const entity of entities) {
     const dbEntity = await upsertEntity({
@@ -10,14 +10,14 @@ export async function upsertExtractedEntities(entities: ExtractedEntity[]): Prom
       type: entity.type as EntityType,
       metadata: (entity.metadata as Record<string, any>) || {},
       mention_count: 1,
-    });
+    }, userId);
     results.push(dbEntity);
   }
   return results;
 }
 
-export async function getGraphSummary(): Promise<string> {
-  const entities = await getEntities();
+export async function getGraphSummary(userId = "blair"): Promise<string> {
+  const entities = await getEntities(undefined, userId);
   if (!entities || entities.length === 0) return "No known entities yet.";
   
   const people = entities.filter(e => e.type === 'person').map(e => e.name).join(", ");
@@ -34,8 +34,8 @@ export async function getGraphSummary(): Promise<string> {
   return summary.trim();
 }
 
-export async function getEntitySuggestions(mode: SessionMode): Promise<{ topic: string, prompt: string }[]> {
-  const entities = await getEntities();
+export async function getEntitySuggestions(mode: SessionMode, userId = "blair"): Promise<{ topic: string, prompt: string }[]> {
+  const entities = await getEntities(undefined, userId);
   if (mode === "explore_era") {
     return [{ topic: "Childhood", prompt: "Tell me about your childhood." }];
   }
@@ -45,13 +45,13 @@ export async function getEntitySuggestions(mode: SessionMode): Promise<{ topic: 
   return [{ topic: "Life", prompt: "Tell me a story about your life." }];
 }
 
-export async function getBiographicalProfile(): Promise<{
+export async function getBiographicalProfile(userId = "blair"): Promise<{
   eras: string[];
   places: string[];
   estimatedBirthDecade?: string;
   estimatedBirthYear?: number;
 }> {
-  const entities = await getEntities();
+  const entities = await getEntities(undefined, userId);
   const eras = entities.filter((e) => e.type === "era").map((e) => e.name);
   const places = entities.filter((e) => e.type === "place").map((e) => e.name);
 
@@ -84,4 +84,3 @@ export async function getBiographicalProfile(): Promise<{
     estimatedBirthYear: birthYear,
   };
 }
-

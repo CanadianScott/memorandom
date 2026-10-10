@@ -12,6 +12,7 @@ export type SortOption = "recency" | "location" | "people" | "timeline";
 export interface StoryCatalogProps {
   initialStories: StoryWithDetails[];
   initialEntities?: Entity[];
+  userId?: string;
 }
 
 interface StoryGroup {
@@ -26,6 +27,7 @@ interface StoryGroup {
 export function StoryCatalog({
   initialStories,
   initialEntities = [],
+  userId = "blair",
 }: StoryCatalogProps) {
   const router = useRouter();
   const [stories, setStories] = useState<StoryWithDetails[]>(initialStories);
@@ -36,7 +38,7 @@ export function StoryCatalog({
 
   const handleDeleteStory = async (storyId: string) => {
     try {
-      await deleteStory(storyId);
+      await deleteStory(storyId, userId);
       setStories((prev) => prev.filter((s) => s.id !== storyId));
       setDeleteToastMessage("Story deleted successfully.");
       setTimeout(() => setDeleteToastMessage(null), 3500);
@@ -56,14 +58,23 @@ export function StoryCatalog({
     }
   };
 
-  // Synchronize client-side with local storage / Supabase on mount
+  // Synchronize with props when initialStories or initialEntities change (e.g. user switch)
+  useEffect(() => {
+    setStories(initialStories);
+  }, [initialStories]);
+
+  useEffect(() => {
+    setEntities(initialEntities);
+  }, [initialEntities]);
+
+  // Synchronize client-side with local storage / Supabase on mount or user switch
   useEffect(() => {
     let isMounted = true;
     async function refreshCatalog() {
       try {
         const [freshStories, freshEntities] = await Promise.all([
-          getStories(),
-          getEntities(),
+          getStories(undefined, userId),
+          getEntities(undefined, userId),
         ]);
         if (isMounted) {
           if (Array.isArray(freshStories)) {
@@ -81,7 +92,7 @@ export function StoryCatalog({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [userId]);
 
   // Auto-heal stories in storage that are missing a biographical narrative
   useEffect(() => {
@@ -109,7 +120,7 @@ export function StoryCatalog({
               if (data.title && (!s.title || s.title === "Interview Segment" || s.title === "Untitled Story")) {
                 updatedFields.title = data.title;
               }
-              await updateStory(s.id, updatedFields);
+              await updateStory(s.id, updatedFields, userId);
               setStories((prev) =>
                 prev.map((item) => (item.id === s.id ? { ...item, ...updatedFields } : item))
               );
@@ -125,7 +136,7 @@ export function StoryCatalog({
     return () => {
       isMounted = false;
     };
-  }, [stories.length]);
+  }, [stories.length, userId]);
 
   // Filter stories when an entity is selected
   const filteredStories = useMemo(() => {

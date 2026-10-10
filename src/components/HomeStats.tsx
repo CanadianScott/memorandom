@@ -7,12 +7,14 @@ export interface HomeStatsProps {
   initialStoriesCount: number;
   initialPeopleCount: number;
   initialPlacesCount: number;
+  userId?: string;
 }
 
 export function HomeStats({
   initialStoriesCount,
   initialPeopleCount,
   initialPlacesCount,
+  userId = "blair",
 }: HomeStatsProps) {
   const [storiesCount, setStoriesCount] = useState<number>(initialStoriesCount);
   const [peopleCount, setPeopleCount] = useState<number>(initialPeopleCount);
@@ -24,7 +26,7 @@ export function HomeStats({
 
     async function syncStats() {
       try {
-        const [stories, entities] = await Promise.all([getStories(), getEntities()]);
+        const [stories, entities] = await Promise.all([getStories(undefined, userId), getEntities(undefined, userId)]);
         if (isMounted) {
           if (Array.isArray(stories)) {
             setStoriesCount(stories.length);

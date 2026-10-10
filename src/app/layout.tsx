@@ -28,6 +28,7 @@ export const viewport: Viewport = {
 
 import { PwaRegister } from "@/components/PwaRegister";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { UserProvider } from "@/lib/user/context";
 
 export default function RootLayout({
   children,
@@ -44,9 +45,11 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Memorandom" />
       </head>
       <body className="min-h-full flex flex-col bg-cream text-ink font-sans" suppressHydrationWarning>
-        <PwaRegister />
-        <OfflineBanner />
-        {children}
+        <UserProvider>
+          <PwaRegister />
+          <OfflineBanner />
+          {children}
+        </UserProvider>
       </body>
     </html>
   );

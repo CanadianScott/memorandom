@@ -15,10 +15,11 @@ export interface InterviewSession {
 
 export async function createInterviewSession(
   mode: SessionMode,
-  promptUsed?: string
+  promptUsed?: string,
+  userId = "blair"
 ): Promise<InterviewSession> {
   try {
-    const dbSession = await createSession(mode, promptUsed);
+    const dbSession = await createSession(mode, promptUsed, userId);
     return {
       id: dbSession.id,
       mode: mode,
@@ -42,7 +43,8 @@ export async function saveStoryFromTranscript(
   session: InterviewSession,
   transcript: string,
   precomputedSummary?: string | null,
-  precomputedTitle?: string | null
+  precomputedTitle?: string | null,
+  userId = "blair"
 ): Promise<Story> {
   let summary = precomputedSummary;
   let title = precomputedTitle || session.currentTopic || "Interview Segment";
@@ -76,13 +78,13 @@ export async function saveStoryFromTranscript(
     summary: summary,
     title: title,
     era_tags: [],
-  });
+  }, userId);
   
   try {
     const extractionResult = await extractEntities(transcript);
-    const dbEntities = await upsertExtractedEntities(extractionResult.entities);
+    const dbEntities = await upsertExtractedEntities(extractionResult.entities, userId);
     if (dbEntities.length > 0) {
-      await linkStoryEntities(story.id, dbEntities.map((e) => e.id));
+      await linkStoryEntities(story.id, dbEntities.map((e) => e.id), userId);
     }
   } catch (err) {
     console.warn("Entity linking failed non-critically:", err);

@@ -70,9 +70,9 @@ export function createBrowserClient(): SupabaseClient<Database> {
 
 export const supabase = createBrowserClient();
 
-export async function getEntities(type?: EntityType): Promise<Entity[]> {
+export async function getEntities(type?: EntityType, userId = "blair"): Promise<Entity[]> {
   if (!isSupabaseConfigured) {
-    return localGetEntities(type);
+    return localGetEntities(type, userId);
   }
   try {
     let query = supabase.from("entities").select("*").order("name", { ascending: true });
@@ -84,13 +84,13 @@ export async function getEntities(type?: EntityType): Promise<Entity[]> {
     return data ?? [];
   } catch (err) {
     console.warn("Supabase fetch failed, falling back to local entities:", err);
-    return localGetEntities(type);
+    return localGetEntities(type, userId);
   }
 }
 
-export async function upsertEntity(entity: EntityInsert): Promise<Entity> {
+export async function upsertEntity(entity: EntityInsert, userId = "blair"): Promise<Entity> {
   if (!isSupabaseConfigured) {
-    return localUpsertEntity(entity);
+    return localUpsertEntity(entity, userId);
   }
   try {
     const { data, error } = await supabase
@@ -102,11 +102,11 @@ export async function upsertEntity(entity: EntityInsert): Promise<Entity> {
     return data as Entity;
   } catch (err) {
     console.warn("Supabase upsert failed, falling back to local entity:", err);
-    return localUpsertEntity(entity);
+    return localUpsertEntity(entity, userId);
   }
 }
 
-export async function createStory(storyData: StoryInsert): Promise<Story> {
+export async function createStory(storyData: StoryInsert, userId = "blair"): Promise<Story> {
   const sanitized = { ...storyData };
   if (!sanitized.summary || sanitized.summary.trim().length < 10 || sanitized.summary.trim() === sanitized.transcript.trim()) {
     const { synthesizeBiographicalFallback } = await import("@/lib/gemini/summarize");
@@ -118,7 +118,7 @@ export async function createStory(storyData: StoryInsert): Promise<Story> {
   }
 
   if (!isSupabaseConfigured) {
-    return localCreateStory(sanitized);
+    return localCreateStory(sanitized, userId);
   }
   try {
     const { data: story, error } = await supabase
@@ -130,13 +130,13 @@ export async function createStory(storyData: StoryInsert): Promise<Story> {
     return story as Story;
   } catch (err) {
     console.warn("Supabase createStory failed, falling back to local story:", err);
-    return localCreateStory(sanitized);
+    return localCreateStory(sanitized, userId);
   }
 }
 
-export async function updateStory(id: string, updates: Partial<Pick<Story, "title" | "summary">>): Promise<void> {
+export async function updateStory(id: string, updates: Partial<Pick<Story, "title" | "summary">>, userId = "blair"): Promise<void> {
   if (!isSupabaseConfigured) {
-    localUpdateStory(id, updates);
+    localUpdateStory(id, updates, userId);
     return;
   }
   try {
@@ -147,32 +147,33 @@ export async function updateStory(id: string, updates: Partial<Pick<Story, "titl
     if (error) throw error;
   } catch (err) {
     console.warn("Supabase updateStory failed, falling back to local:", err);
-    localUpdateStory(id, updates);
+    localUpdateStory(id, updates, userId);
   }
 }
 
-export async function deleteStory(id: string): Promise<boolean> {
+export async function deleteStory(id: string, userId = "blair"): Promise<boolean> {
   if (!isSupabaseConfigured) {
-    return localDeleteStory(id);
+    return localDeleteStory(id, userId);
   }
   try {
     const { error } = await supabase.from("stories").delete().eq("id", id);
     if (error) throw error;
-    localDeleteStory(id);
+    localDeleteStory(id, userId);
     return true;
   } catch (err) {
     console.warn("Supabase deleteStory failed, falling back to local:", err);
-    return localDeleteStory(id);
+    return localDeleteStory(id, userId);
   }
 }
 
 export async function linkStoryEntities(
   storyId: string,
-  entityIds: string[]
+  entityIds: string[],
+  userId = "blair"
 ): Promise<StoryEntity[]> {
   if (entityIds.length === 0) return [];
   if (!isSupabaseConfigured) {
-    return localLinkStoryEntities(storyId, entityIds);
+    return localLinkStoryEntities(storyId, entityIds, userId);
   }
   try {
     const rows: StoryEntityInsert[] = entityIds.map((entityId) => ({
@@ -188,7 +189,7 @@ export async function linkStoryEntities(
     return data ?? [];
   } catch (err) {
     console.warn("Supabase linkStoryEntities failed, falling back to local:", err);
-    return localLinkStoryEntities(storyId, entityIds);
+    return localLinkStoryEntities(storyId, entityIds, userId);
   }
 }
 
@@ -209,10 +210,11 @@ export interface GetStoriesOptions {
 }
 
 export async function getStories(
-  options?: GetStoriesOptions
+  options?: GetStoriesOptions,
+  userId = "blair"
 ): Promise<StoryWithDetails[]> {
   if (!isSupabaseConfigured) {
-    return getLocalStoriesWithDetails(options);
+    return getLocalStoriesWithDetails(options, userId);
   }
   try {
     let query = supabase
@@ -248,12 +250,12 @@ export async function getStories(
     return (data as unknown as StoryWithDetails[]) ?? [];
   } catch (err) {
     console.warn("Supabase getStories failed, using local stories:", err);
-    return getLocalStoriesWithDetails(options);
+    return getLocalStoriesWithDetails(options, userId);
   }
 }
 
-function getLocalStoriesWithDetails(options?: GetStoriesOptions): StoryWithDetails[] {
-  let stories = localGetStories();
+function getLocalStoriesWithDetails(options?: GetStoriesOptions, userId = "blair"): StoryWithDetails[] {
+  let stories = localGetStories(userId);
   if (options?.sessionId) {
     stories = stories.filter((s) => s.session_id === options.sessionId);
   }
@@ -263,8 +265,8 @@ function getLocalStoriesWithDetails(options?: GetStoriesOptions): StoryWithDetai
     stories = stories.slice(0, options.limit);
   }
 
-  const allEntities = localGetEntities();
-  const allStoryEntities = localGetStoryEntities();
+  const allEntities = localGetEntities(undefined, userId);
+  const allStoryEntities = localGetStoryEntities(undefined, userId);
 
   return stories.map((s) => {
     const storyLinks = allStoryEntities.filter((se) => se.story_id === s.id);
@@ -323,7 +325,8 @@ export interface UploadMediaOptions {
 export async function uploadMedia(
   file: File | Blob,
   source: MediaSource,
-  options?: UploadMediaOptions
+  options?: UploadMediaOptions,
+  userId = "blair"
 ): Promise<Media> {
   const ext = options?.filename?.split(".").pop() || "jpg";
   const name = options?.filename || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`;
@@ -348,7 +351,7 @@ export async function uploadMedia(
       metadata: (options?.metadata as Record<string, Json>) ?? {},
       created_at: new Date().toISOString(),
     };
-    return localSaveMedia(mediaRecord);
+    return localSaveMedia(mediaRecord, userId);
   }
 
   try {
@@ -406,13 +409,13 @@ export async function uploadMedia(
       metadata: (options?.metadata as Record<string, Json>) ?? {},
       created_at: new Date().toISOString(),
     };
-    return localSaveMedia(localMedia);
+    return localSaveMedia(localMedia, userId);
   }
 }
 
-export async function getMedia(source?: MediaSource): Promise<Media[]> {
+export async function getMedia(source?: MediaSource, userId = "blair"): Promise<Media[]> {
   if (!isSupabaseConfigured) {
-    const localItems = localGetMedia();
+    const localItems = localGetMedia(userId);
     return source ? localItems.filter((m) => m.source === source) : localItems;
   }
   try {
@@ -425,7 +428,7 @@ export async function getMedia(source?: MediaSource): Promise<Media[]> {
     return (data as Media[]) ?? [];
   } catch (error) {
     console.warn("Failed to fetch media from Supabase, returning local media:", error);
-    const localItems = localGetMedia();
+    const localItems = localGetMedia(userId);
     return source ? localItems.filter((m) => m.source === source) : localItems;
   }
 }
@@ -440,9 +443,9 @@ export type ChapterWithStories = Chapter & {
   }[];
 };
 
-export async function getChaptersWithStories(): Promise<ChapterWithStories[]> {
+export async function getChaptersWithStories(userId = "blair"): Promise<ChapterWithStories[]> {
   if (!isSupabaseConfigured) {
-    return getLocalChaptersWithStories();
+    return getLocalChaptersWithStories(userId);
   }
   try {
     const { data, error } = await supabase
@@ -463,14 +466,14 @@ export async function getChaptersWithStories(): Promise<ChapterWithStories[]> {
     return (data as unknown as ChapterWithStories[]) ?? [];
   } catch (err) {
     console.warn("Supabase getChaptersWithStories failed, falling back to local:", err);
-    return getLocalChaptersWithStories();
+    return getLocalChaptersWithStories(userId);
   }
 }
 
-function getLocalChaptersWithStories(): ChapterWithStories[] {
-  const chapters = localGetChapters();
-  const chapterStories = localGetChapterStories();
-  const stories = localGetStories();
+function getLocalChaptersWithStories(userId = "blair"): ChapterWithStories[] {
+  const chapters = localGetChapters(userId);
+  const chapterStories = localGetChapterStories(userId);
+  const stories = localGetStories(userId);
 
   return chapters.map((c) => ({
     ...c,
@@ -489,10 +492,11 @@ function getLocalChaptersWithStories(): ChapterWithStories[] {
 
 export async function createSession(
   mode: SessionMode,
-  promptUsed?: string
+  promptUsed?: string,
+  userId = "blair"
 ): Promise<Session> {
   if (!isSupabaseConfigured) {
-    return localCreateSession(mode, promptUsed);
+    return localCreateSession(mode, promptUsed, userId);
   }
   try {
     const { data, error } = await supabase
@@ -509,13 +513,13 @@ export async function createSession(
     return data as Session;
   } catch (err) {
     console.warn("Supabase createSession failed, using local session:", err);
-    return localCreateSession(mode, promptUsed);
+    return localCreateSession(mode, promptUsed, userId);
   }
 }
 
-export async function endSession(id: string): Promise<Session> {
+export async function endSession(id: string, userId = "blair"): Promise<Session> {
   if (!isSupabaseConfigured) {
-    return localEndSession(id);
+    return localEndSession(id, userId);
   }
   try {
     const { data, error } = await supabase
@@ -531,13 +535,13 @@ export async function endSession(id: string): Promise<Session> {
     return data as Session;
   } catch (err) {
     console.warn("Supabase endSession failed, using local session:", err);
-    return localEndSession(id);
+    return localEndSession(id, userId);
   }
 }
 
-export async function getSuggestedPrompts(): Promise<SuggestedPrompt[]> {
+export async function getSuggestedPrompts(userId = "blair"): Promise<SuggestedPrompt[]> {
   if (!isSupabaseConfigured) {
-    return localGetSuggestedPrompts();
+    return localGetSuggestedPrompts(userId);
   }
   try {
     const { data, error } = await supabase
@@ -548,15 +552,16 @@ export async function getSuggestedPrompts(): Promise<SuggestedPrompt[]> {
     return (data as unknown as SuggestedPrompt[]) ?? [];
   } catch (err) {
     console.warn("Supabase getSuggestedPrompts failed, using local prompts:", err);
-    return localGetSuggestedPrompts();
+    return localGetSuggestedPrompts(userId);
   }
 }
 
 export async function createSuggestedPrompt(
-  promptData: SuggestedPromptInsert
+  promptData: SuggestedPromptInsert,
+  userId = "blair"
 ): Promise<SuggestedPrompt> {
   if (!isSupabaseConfigured) {
-    return localCreateSuggestedPrompt(promptData);
+    return localCreateSuggestedPrompt(promptData, userId);
   }
   try {
     const { data, error } = await supabase
@@ -565,20 +570,21 @@ export async function createSuggestedPrompt(
       .select()
       .single();
     if (error) throw error;
-    localCreateSuggestedPrompt(data as unknown as SuggestedPromptInsert);
+    localCreateSuggestedPrompt(data as unknown as SuggestedPromptInsert, userId);
     return data as unknown as SuggestedPrompt;
   } catch (err) {
     console.warn("Supabase createSuggestedPrompt failed, using local store:", err);
-    return localCreateSuggestedPrompt(promptData);
+    return localCreateSuggestedPrompt(promptData, userId);
   }
 }
 
 export async function updateSuggestedPrompt(
   id: string,
-  updates: Partial<SuggestedPromptUpdate>
+  updates: Partial<SuggestedPromptUpdate>,
+  userId = "blair"
 ): Promise<SuggestedPrompt | null> {
   if (!isSupabaseConfigured) {
-    return localUpdateSuggestedPrompt(id, updates);
+    return localUpdateSuggestedPrompt(id, updates, userId);
   }
   try {
     const { data, error } = await supabase
@@ -588,17 +594,17 @@ export async function updateSuggestedPrompt(
       .select()
       .single();
     if (error) throw error;
-    localUpdateSuggestedPrompt(id, updates);
+    localUpdateSuggestedPrompt(id, updates, userId);
     return data as unknown as SuggestedPrompt;
   } catch (err) {
     console.warn("Supabase updateSuggestedPrompt failed, using local store:", err);
-    return localUpdateSuggestedPrompt(id, updates);
+    return localUpdateSuggestedPrompt(id, updates, userId);
   }
 }
 
-export async function deleteSuggestedPrompt(id: string): Promise<boolean> {
+export async function deleteSuggestedPrompt(id: string, userId = "blair"): Promise<boolean> {
   if (!isSupabaseConfigured) {
-    return localDeleteSuggestedPrompt(id);
+    return localDeleteSuggestedPrompt(id, userId);
   }
   try {
     const { error } = await supabase
@@ -606,10 +612,10 @@ export async function deleteSuggestedPrompt(id: string): Promise<boolean> {
       .delete()
       .eq("id", id);
     if (error) throw error;
-    localDeleteSuggestedPrompt(id);
+    localDeleteSuggestedPrompt(id, userId);
     return true;
   } catch (err) {
     console.warn("Supabase deleteSuggestedPrompt failed, using local store:", err);
-    return localDeleteSuggestedPrompt(id);
+    return localDeleteSuggestedPrompt(id, userId);
   }
 }

@@ -20,8 +20,11 @@ import { DocumentIngest } from "@/components/upload/DocumentIngest";
 import { getMedia } from "@/lib/supabase/client";
 import { Media } from "@/types/database";
 import { cn } from "@/lib/utils";
+import { useUser } from "@/lib/user/context";
+import { UserSwitcher } from "@/components/UserSwitcher";
 
 export default function UploadPage() {
+  const { userId } = useUser();
   const [mediaList, setMediaList] = useState<Media[]>([]);
   const [isLoadingMedia, setIsLoadingMedia] = useState(true);
   const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
@@ -35,7 +38,7 @@ export default function UploadPage() {
   const fetchMedia = async () => {
     setIsLoadingMedia(true);
     try {
-      const items = await getMedia();
+      const items = await getMedia(undefined, userId);
       setMediaList(items);
     } catch (err) {
       console.warn("Failed to load existing media:", err);
@@ -46,7 +49,7 @@ export default function UploadPage() {
 
   useEffect(() => {
     fetchMedia();
-  }, []);
+  }, [userId]);
 
   const handleFilesSelected = (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -96,13 +99,16 @@ export default function UploadPage() {
     <main className="min-h-screen bg-cream text-ink pb-24">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12 flex flex-col gap-8">
         <header className="flex flex-col gap-4">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-warm-brown hover:text-warm-brown/80 font-medium text-base transition self-start min-h-[48px] py-2 px-3 rounded-full hover:bg-warm-brown/10 -ml-3"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back to Home
-          </Link>
+          <div className="flex items-center justify-between">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-warm-brown hover:text-warm-brown/80 font-medium text-base transition self-start min-h-[48px] py-2 px-3 rounded-full hover:bg-warm-brown/10 -ml-3"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              Back to Home
+            </Link>
+            <UserSwitcher />
+          </div>
 
           <div>
             <h1 className="text-3xl sm:text-4xl font-serif font-bold text-warm-brown tracking-tight">

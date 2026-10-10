@@ -38,10 +38,11 @@ export async function autoOrganizeChapters(
 export async function createChapter(
   title: string,
   storyIds: string[],
-  coverMediaId?: string
+  coverMediaId?: string,
+  userId = "blair"
 ): Promise<Chapter> {
   if (!isSupabaseConfigured) {
-    return localCreateChapter(title, storyIds, coverMediaId);
+    return localCreateChapter(title, storyIds, coverMediaId, userId);
   }
 
   try {
@@ -82,13 +83,13 @@ export async function createChapter(
     return chapter as Chapter;
   } catch (err) {
     console.warn("Supabase createChapter failed, falling back to local:", err);
-    return localCreateChapter(title, storyIds, coverMediaId);
+    return localCreateChapter(title, storyIds, coverMediaId, userId);
   }
 }
 
-export async function reorderChapters(chapterIds: string[]): Promise<void> {
+export async function reorderChapters(chapterIds: string[], userId = "blair"): Promise<void> {
   if (!isSupabaseConfigured) {
-    localReorderChapters(chapterIds);
+    localReorderChapters(chapterIds, userId);
     return;
   }
 
@@ -101,7 +102,7 @@ export async function reorderChapters(chapterIds: string[]): Promise<void> {
     if (error) throw error;
   } catch (err) {
     console.warn("Supabase reorderChapters failed, falling back to local:", err);
-    localReorderChapters(chapterIds);
+    localReorderChapters(chapterIds, userId);
   }
 }
 

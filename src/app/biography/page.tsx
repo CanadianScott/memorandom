@@ -19,6 +19,9 @@ import { Button } from "@/components/ui/Button";
 import { getStories, getEntities, StoryWithDetails } from "@/lib/supabase/client";
 import { Entity } from "@/types/database";
 import { synthesizeBiographicalFallback } from "@/lib/gemini/summarize";
+import { useUser } from "@/lib/user/context";
+import { USERS } from "@/lib/user/users";
+import { UserSwitcher } from "@/components/UserSwitcher";
 import "./print.css";
 
 interface EraItem {
@@ -87,6 +90,7 @@ function parseYearFromEntityOrName(name: string, metadata?: Record<string, unkno
 }
 
 export default function BiographyPage() {
+  const { userId } = useUser();
   const [stories, setStories] = useState<StoryWithDetails[]>([]);
   const [entities, setEntities] = useState<Entity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,8 +101,8 @@ export default function BiographyPage() {
     async function fetchData() {
       try {
         const [fetchedStories, fetchedEntities] = await Promise.all([
-          getStories(),
-          getEntities(),
+          getStories(undefined, userId),
+          getEntities(undefined, userId),
         ]);
         if (active) {
           setStories(fetchedStories);
@@ -117,7 +121,7 @@ export default function BiographyPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [userId]);
 
   // Helper to find stories related to an entity
   const findLinkedStories = useMemo(() => {
@@ -320,13 +324,16 @@ export default function BiographyPage() {
     <div className="min-h-screen bg-cream text-ink">
       {/* Top Navigation */}
       <nav className="p-6 flex items-center justify-between border-b border-warm-brown/10 print:hidden bg-cream/80 backdrop-blur sticky top-0 z-40">
-        <Link
-          href="/"
-          className="flex items-center gap-2 text-warm-brown hover:text-warm-brown/80 font-medium transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Home</span>
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-warm-brown hover:text-warm-brown/80 font-medium transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Home</span>
+          </Link>
+          <UserSwitcher />
+        </div>
         <div className="flex items-center gap-6">
           <Link
             href="/biography"
@@ -370,7 +377,7 @@ export default function BiographyPage() {
               <span>Biographical Knowledge Graph Record</span>
             </div>
             <h1 className="text-4xl md:text-6xl font-serif font-bold text-warm-brown tracking-tight">
-              Biographical Sketch
+              {USERS[userId]?.displayName}&apos;s Biographical Sketch
             </h1>
             <p className="text-lg md:text-xl text-ink/75 font-serif italic mt-2">
               A persistent chronicle of life eras, cherished relationships, and memorable places.

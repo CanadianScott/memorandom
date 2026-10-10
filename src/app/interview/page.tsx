@@ -18,6 +18,8 @@ import { SessionMode } from "@/types/database";
 import { ExtractedEntity } from "@/types/entities";
 import { CarouselItem } from "@/components/visual-stage/ImageCarousel";
 import { Sparkles, Radio, Keyboard, Send, RefreshCw, Image as ImageIcon, MapPin, Home, ScrollText } from "lucide-react";
+import { useUser } from "@/lib/user/context";
+import { USERS } from "@/lib/user/users";
 
 function InterviewContent() {
   const searchParams = useSearchParams();
@@ -66,14 +68,16 @@ function InterviewContent() {
     setActiveLocation(loc);
   }, []);
 
+  const { userId } = useUser();
+
   // Initialize interview session on mount
   useEffect(() => {
     let isMounted = true;
     async function initSession() {
       try {
         const [s, graph] = await Promise.all([
-          createInterviewSession(mode, promptParam || undefined),
-          getGraphSummary().catch(() => ""),
+          createInterviewSession(mode, promptParam || undefined, userId),
+          getGraphSummary(userId).catch(() => ""),
         ]);
         if (isMounted) {
           setSession(s);
@@ -94,7 +98,7 @@ function InterviewContent() {
     return () => {
       isMounted = false;
     };
-  }, [mode, promptParam]);
+  }, [mode, promptParam, userId]);
 
   // Text input fallback
   const [manualText, setManualText] = useState("");
@@ -258,38 +262,6 @@ function InterviewContent() {
   const [classicIsProcessing, setClassicIsProcessing] = useState(false);
   const pauseTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize session on mount
-  useEffect(() => {
-    async function init() {
-      try {
-        let newSession: InterviewSession;
-        try {
-          newSession = await createInterviewSession(mode, promptParam || undefined);
-        } catch {
-          newSession = {
-            id: `session-${Date.now()}`,
-            mode,
-            currentTopic: promptParam || undefined,
-            entitiesMentioned: [],
-            questionHistory: promptParam ? [promptParam] : [],
-          };
-        }
-        setSession(newSession);
-
-        let summary = "";
-        try {
-          summary = await getGraphSummary();
-        } catch {
-          summary = "";
-        }
-        setGraphSummary(summary);
-      } catch (e) {
-        console.error("Session init error:", e);
-      }
-    }
-    init();
-  }, [mode]);
-
   // Classic mode processing
   const handleClassicProcess = useCallback(
     async (textToProcess: string) => {
@@ -327,7 +299,7 @@ function InterviewContent() {
 
         if (shouldInjectHistorical) {
           try {
-            const profile = await getBiographicalProfile();
+            const profile = await getBiographicalProfile(userId);
             const hasBkgContext =
               (profile.eras && profile.eras.length > 0) ||
               (profile.places && profile.places.length > 0);
@@ -406,7 +378,7 @@ function InterviewContent() {
         setClassicIsProcessing(false);
       }
     },
-    [session, classicIsProcessing, classicStopListening, mode, currentPrompt, graphSummary, triggerVisualEnrichment, classicResetTranscript, classicSpeak, enrichVisuals, setVisualStageTabTracked]
+    [session, classicIsProcessing, classicStopListening, mode, currentPrompt, graphSummary, triggerVisualEnrichment, classicResetTranscript, classicSpeak, enrichVisuals, setVisualStageTabTracked, userId]
   );
 
   // Auto-silence timer for classic mode
@@ -525,7 +497,8 @@ function InterviewContent() {
           { ...activeSession, currentTopic: title },
           combinedTranscript,
           summary,
-          title
+          title,
+          userId
         );
 
         if (typeof window !== "undefined") {
@@ -554,6 +527,7 @@ function InterviewContent() {
     classicTranscript,
     manualText,
     isSavingSession,
+    userId,
   ]);
 
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -611,6 +585,11 @@ function InterviewContent() {
                 Gemini Live Voice
               </span>
             )}
+
+            {/* Active User Badge */}
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-serif font-medium bg-warm-brown/10 text-warm-brown border border-warm-brown/20">
+              {USERS[userId]?.displayName}&apos;s Interview
+            </span>
           </div>
 
           <div className="flex items-center gap-2">

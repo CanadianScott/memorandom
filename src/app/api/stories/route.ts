@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStories, createStory, deleteStory } from "@/lib/supabase/client";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const stories = await getStories();
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("userId") || "blair";
+    const stories = await getStories(undefined, userId);
     return NextResponse.json({ stories });
   } catch (err) {
     console.error("GET /api/stories error:", err);
@@ -22,6 +24,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const userId = body?.userId || "blair";
     let summary = body?.summary?.trim() || null;
     let title = body?.title?.trim() || "Life Story Memory";
 
@@ -48,7 +51,7 @@ export async function POST(req: NextRequest) {
       summary,
       era_tags: body?.era_tags || [],
       session_id: body?.session_id || null,
-    });
+    }, userId);
 
     return NextResponse.json({ story }, { status: 201 });
   } catch (err) {
@@ -61,11 +64,13 @@ export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     let id = searchParams.get("id");
+    let userId = searchParams.get("userId") || "blair";
 
     if (!id) {
       try {
         const body = await req.json();
         id = body?.id;
+        if (body?.userId) userId = body.userId;
       } catch {
         // no body
       }
@@ -75,7 +80,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Story id is required" }, { status: 400 });
     }
 
-    const success = await deleteStory(id);
+    const success = await deleteStory(id, userId);
     return NextResponse.json({ success });
   } catch (err) {
     console.error("DELETE /api/stories error:", err);
