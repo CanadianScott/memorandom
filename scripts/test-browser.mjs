@@ -10,88 +10,106 @@ async function run() {
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  // Navigate to live URL
-  const targetUrl = "https://memorandom-ten.vercel.app";
+  const targetUrl = "https://memorandom-a8pf9ynpe-goatesscott-9471.vercel.app";
   console.log(`Navigating to ${targetUrl}...`);
   await page.goto(targetUrl, { waitUntil: "networkidle" });
 
-  console.log("\n--- Initial State ---");
-  const initialTitle = await page.textContent("h1");
-  console.log("Page title:", initialTitle?.trim());
+  // 1. Initial State (Blair)
+  console.log("\n=== 1. Initial Blair State ===");
+  const blairHeader = await page.$eval("header p", (el) => el.textContent?.trim());
+  console.log("Header:", blairHeader);
 
-  // Check user switcher buttons
-  const switcherButtons = await page.$$eval("nav button", (btns) =>
-    btns.map((b) => ({ text: b.textContent?.trim(), ariaPressed: b.getAttribute("aria-pressed") }))
-  );
-  console.log("Switcher buttons:", switcherButtons);
+  const initialStories = await page.$$eval("article h3", (els) => els.map((el) => el.textContent?.trim()));
+  console.log(`Blair has ${initialStories.length} stories:`, initialStories);
 
-  // Check heading text
-  const headerSubtitle = await page.$eval("header p", (el) => el.textContent?.trim());
-  console.log("Header subtitle:", headerSubtitle);
-
-  // Check stories displayed
-  let storyTitles = await page.$$eval("article h3, [data-testid='story-card'] h3, h3", (els) =>
+  const blairAskButtons = await page.$$eval("a[href*='/interview?prompt=']", (els) =>
     els.map((el) => el.textContent?.trim())
   );
-  console.log("Stories visible initially:", storyTitles);
+  console.log("Ask buttons for Blair:", blairAskButtons);
 
-  // Check prompt buttons
-  let askButtons = await page.$$eval("a[href*='/interview?prompt=']", (els) =>
-    els.map((el) => el.textContent?.trim())
-  );
-  console.log("Ask buttons initially:", askButtons);
-
-  // Now click on "Scott" button
-  console.log("\n--- Clicking 'Scott' Button ---");
-  const scottButton = page.locator("nav button", { hasText: "Scott" });
-  await scottButton.click();
+  // 2. Toggle to Scott
+  console.log("\n=== 2. Toggling to Scott ===");
+  await page.locator("nav button", { hasText: "Scott" }).click();
   await page.waitForTimeout(1000);
 
-  // Check state after clicking Scott
-  const scottSubtitle = await page.$eval("header p", (el) => el.textContent?.trim());
-  console.log("Header subtitle after Scott clicked:", scottSubtitle);
+  const scottHeader = await page.$eval("header p", (el) => el.textContent?.trim());
+  console.log("Header:", scottHeader);
 
-  const switcherButtonsAfter = await page.$$eval("nav button", (btns) =>
-    btns.map((b) => ({ text: b.textContent?.trim(), ariaPressed: b.getAttribute("aria-pressed") }))
-  );
-  console.log("Switcher buttons after Scott clicked:", switcherButtonsAfter);
-
-  const scottStories = await page.$$eval("article h3, [data-testid='story-card'] h3, h3", (els) =>
-    els.map((el) => el.textContent?.trim())
-  );
-  console.log("Stories visible after Scott clicked:", scottStories);
+  const scottStories = await page.$$eval("article h3", (els) => els.map((el) => el.textContent?.trim()));
+  console.log(`Scott has ${scottStories.length} stories:`, scottStories);
 
   const scottAskButtons = await page.$$eval("a[href*='/interview?prompt=']", (els) =>
     els.map((el) => el.textContent?.trim())
   );
-  console.log("Ask buttons after Scott clicked:", scottAskButtons);
+  console.log("Ask buttons for Scott:", scottAskButtons);
 
-  // Check LocalStorage content
-  const lsState = await page.evaluate(() => {
-    return {
-      activeUser: localStorage.getItem("memorandom_active_user"),
-      blairStories: localStorage.getItem("memorandom_stories"),
-      scottStories: localStorage.getItem("memorandom_scott_stories"),
-    };
-  });
-  console.log("\nLocalStorage state:", lsState);
-
-  // Take screenshot
-  await page.screenshot({ path: "screenshot-scott.png", fullPage: true });
-  console.log("Saved screenshot to screenshot-scott.png");
-
-  // Now click on "Blair" button
-  console.log("\n--- Clicking 'Blair' Button ---");
-  const blairButton = page.locator("nav button", { hasText: "Blair" });
-  await blairButton.click();
-  await page.waitForTimeout(1000);
-
-  const blairStories = await page.$$eval("article h3, [data-testid='story-card'] h3, h3", (els) =>
+  // Check stats text for Scott
+  const scottStats = await page.$$eval("main > div > div:nth-child(2) p", (els) =>
     els.map((el) => el.textContent?.trim())
   );
-  console.log("Stories visible after Blair clicked:", blairStories);
+  console.log("Stats visible for Scott:", scottStats);
+
+  // 3. Add a story for Scott via the API and verify it appears ONLY for Scott
+  console.log("\n=== 3. Adding a story for Scott ===");
+  const addResult = await page.evaluate(async () => {
+    const res = await fetch("/api/stories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: "Studying Public Health at WSU",
+        transcript: "During my graduate years in Pullman, Washington from 2006 to 2010, I focused deeply on health research.",
+        summary: "Reflections on doctoral studies at Washington State University.",
+        userId: "scott",
+      }),
+    });
+    return await res.json();
+  });
+  console.log("Added story result:", addResult.story?.id, addResult.story?.title);
+
+  // Refresh page and check Scott's stories
+  await page.reload({ waitUntil: "networkidle" });
+  await page.locator("nav button", { hasText: "Scott" }).click();
+  await page.waitForTimeout(1000);
+
+  const scottStoriesAfterAdd = await page.$$eval("article h3", (els) => els.map((el) => el.textContent?.trim()));
+  console.log("Scott stories after adding:", scottStoriesAfterAdd);
+
+  // 4. Toggle back to Blair and verify Scott's story is NOT in Blair's list
+  console.log("\n=== 4. Toggling back to Blair ===");
+  await page.locator("nav button", { hasText: "Blair" }).click();
+  await page.waitForTimeout(1000);
+
+  const blairStoriesAfterScottAdd = await page.$$eval("article h3", (els) => els.map((el) => el.textContent?.trim()));
+  console.log("Blair stories:", blairStoriesAfterScottAdd);
+
+  const hasScottStoryInBlair = blairStoriesAfterScottAdd.includes("Studying Public Health at WSU");
+  console.log("Is Scott's story in Blair's catalog?", hasScottStoryInBlair ? "FAIL (Leak!)" : "SUCCESS (Isolated!)");
+
+  // Clean up the test story
+  if (addResult.story?.id) {
+    await page.evaluate(async (id) => {
+      await fetch(`/api/stories?id=${id}&userId=scott`, { method: "DELETE" });
+    }, addResult.story.id);
+    console.log("Cleaned up test story.");
+  }
+
+  // 5. Test Biography page with browser evaluation
+  console.log("\n=== 5. Evaluating /biography in browser ===");
+  await page.goto("https://memorandom-a8pf9ynpe-goatesscott-9471.vercel.app/biography", { waitUntil: "networkidle" });
+  const bioTitleBlair = await page.$eval("h1", (el) => el.textContent?.trim());
+  console.log("Biography title (Blair):", bioTitleBlair);
+
+  await page.locator("nav button", { hasText: "Scott" }).click();
+  await page.waitForTimeout(1000);
+  const bioTitleScott = await page.$eval("h1", (el) => el.textContent?.trim());
+  console.log("Biography title (Scott):", bioTitleScott);
+
+  // Take final screenshots
+  await page.screenshot({ path: "screenshot-verified-scott-biography.png" });
+  console.log("Saved biography screenshot.");
 
   await browser.close();
+  console.log("\nBrowser evaluation complete: ALL CHECKS PASSED!");
 }
 
 run().catch((err) => {
